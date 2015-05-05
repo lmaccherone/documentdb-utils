@@ -12,9 +12,9 @@ runSync = (command, options, next) ->
     if stdout?.length > 0
       console.log("Stdout exec'ing command '#{command}'...\n" + stdout)
 
-runSyncNoExit = (command, options) ->
+runSyncNoExit = (command, options = []) ->
   {stderr, stdout} = runSyncRaw(command, options)
-  console.log("Output of running '#{command}'...\n#{stderr}\n#{stdout}\n")
+  console.log("Output of running '#{command + ' ' + options.join(' ')}'...\n#{stderr}\n#{stdout}\n")
   return {stderr, stdout}
 
 runSyncRaw = (command, options) ->

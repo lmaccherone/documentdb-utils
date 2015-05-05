@@ -225,6 +225,7 @@ Here is an example of a stored procedure that counts all the documents in a coll
 
 ## Changelog ##
 
+* 0.1.1 - 2015-05-04 - Fixed `cake publish`
 * 0.1.0 - 2015-05-03 - Initial release
 
 

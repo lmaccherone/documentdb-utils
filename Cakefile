@@ -50,9 +50,7 @@ task('publish', 'Publish to npm and add git tags', () ->
 
   console.log('checking git status --porcelain')
   runSync('git', ['status', '--porcelain'], (stdout) ->
-    console.dir(stdout)
-    console.log('stdout', stdout.toString())
-    unless stdout?
+    if stdout.length is 0
       console.log('checking origin/master')
       {stderr, stdout} = runSyncNoExit('git', ['rev-parse', 'origin/master'])
 

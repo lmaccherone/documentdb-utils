@@ -1,0 +1,10 @@
+{
+  "version": 3,
+  "file": "hello.js",
+  "sourceRoot": "",
+  "sources": [
+    "hello.coffee"
+  ],
+  "names": [],
+  "mappings": ";AAAA;AAAA,EAAA,OAAO,CAAC,KAAR,GAAgB,SAAA,GAAA;WACd,UAAA,CAAA,CAAY,CAAC,WAAb,CAAA,CAA0B,CAAC,OAA3B,CAAmC,cAAnC,EADc;EAAA,CAAhB,CAAA;AAAA"
+}

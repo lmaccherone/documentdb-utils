@@ -1,0 +1,36 @@
+{
+  "name": "documentdb-utils",
+  "version": "0.1.0",
+  "description": "Easy-of-use and enterprise-class robustness wrapper for Azure's DocumentDB API",
+  "main": "documentdb-utils",
+  "scripts": {
+    "test": "nodeunit"
+  },
+  "keywords": [
+    "Azure",
+    "DocumentDB",
+    "Retries",
+    "Stored-Procedures",
+    "StoredProcedures",
+    "Stored Procedures",
+    "Stored-Procedure",
+    "StoredProcedure",
+    "Stored Procedure",
+    "Trigger",
+    "Triggers",
+    "UDF",
+    "User Defined Function",
+    "User Defined Functions",
+    "User-Defined-Function",
+    "User-Defined-Functions"
+  ],
+  "author": "Larry Maccherone",
+  "license": "MIT",
+  "devDependencies": {
+    "coffee-script": "^1.9.2",
+    "jsdoc": "^3.2.0"
+  },
+  "dependencies": {
+    "documentdb": "^1.0.0"
+  }
+}

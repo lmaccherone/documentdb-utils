@@ -32,6 +32,9 @@ In summary, documentDBUtils takes care of all of this for you and makes it much 
 
 * Triggers, UDFs, and Documents. As of 2015-05-03, documentDBUtils only supports stored procedures.
 
+* Delete Databases or Collections. We automatically create them if they are referenced, but we have not funtionality for deleting them.
+
+
 
 ## Install ##
 
@@ -151,12 +154,90 @@ So:
 1. If `false` is returned from the last prior call to an async operation, don't issue any more async calls. Rather, wrap up the stored procedure quickly. Note, it's unclear to me that the call that returned false is guaranteed to finish, so I've resorted to writing my stored procedures so they will restart correctly wether they fail or not. That said, I have not experienced a case where the last call failed to complete.
 1. Optionally, wrap up early when the stored procedure exceeds other constraints. My super-duper count example below implements both maxRowCount and maxExecutionTime constraints.
 
+Here is an example of a stored procedure that counts all the documents in a collection with an option to filter based upon provided filterQuery field in the initial memo. The source for this is included in this repository.
+
+	count = (memo) ->
+	
+	  collection = getContext().getCollection()
+	
+	  maxRowCountPerExececution = 100000
+	  rowCountForThisExecution = 0
+	  maxExecutionTime = 5000 * 0.9
+	  executionStartTime = new Date().getTime()
+	
+	  unless memo?
+	    memo = {}
+	  unless memo.count?
+	    memo.count = 0
+	  unless memo.continuation?
+	    memo.continuation = null
+	
+	  memo.stillTime = true
+	  memo.stillResources = true
+	  memo.underMaxRowCount = true
+	
+	  query = (responseOptions) ->
+	    memo.stillTime = (new Date().getTime() - executionStartTime) < maxExecutionTime
+	    memo.underMaxRowCount = rowCountForThisExecution < maxRowCountPerExececution
+	
+	    if memo.underMaxRowCount and memo.stillTime and memo.stillResources
+	      responseOptions =
+	        continuation: memo.continuation
+	        pageSize: 1000
+	
+	      if memo.filterQuery?
+	        memo.stillResources = collection.queryDocuments(collection.getSelfLink(), memo.filterQuery, responseOptions, onReadDocuments)
+	      else
+	        memo.stillResources = collection.readDocuments(collection.getSelfLink(), responseOptions, onReadDocuments)
+	
+	    setBody()
+	
+	  onReadDocuments = (err, docFeed, responseOptions) ->
+	    if err
+	      throw err
+	
+	    count = docFeed.length
+	    memo.count += count
+	    rowCountForThisExecution += count
+	    if responseOptions.continuation?
+	      memo.continuation = responseOptions.continuation
+	      query()
+	    else
+	      memo.continuation = null
+	      setBody()
+	
+	  setBody = () ->
+	    getContext().getResponse().setBody(memo)
+	
+	  query()
+	
+	exports.count = count
+
+
 ## Changelog ##
 
 * 0.1.0 - 2015-05-03 - Initial release
 
 
 ## Contributing to documentDBUtils ##
+
+### Triggers, UDFs, and Documents ###
+
+As of 2015-05-03, documentDBUtils only supports stored procedures. I personally don't use triggers or UDFs... yet, but we should probably add that. It should be easier because I don't think we'll have the same throttling and resource limit issues with just creating, deleted, and upserting them. Perhaps even more useful (and a little more work) is to support document operations, particularly bulk updates and multi-page queries which should require retry logic.
+
+### Delete Databases or Collections ###
+
+Should be easy.
+
+### Explicitly specify an operation ###
+
+I realize that this design decision of automatically choosing an operation based upon which parameters are provided might be controversial. If we added an optional "operation" field, then we could check to confirm that they provided the right config fields for that operation.
+
+### What about promises? ###
+
+Promises make the writing of waterfall pattern async much easier. However, I find that they make the writing of complicated ascyn patterns like retries and branching based upon the results of a response much harder. So, I have chosen not to use promises in the implementation of documentDBUtils.
+
+That said, since all of the complex async code is encapsulated inside of documentDBUtils, I want to implement a promises wrapper for documentDBUtils. I would gladly accept a pull-request for this.
 
 ### Documentation ###
 
@@ -186,15 +267,11 @@ handleLanguageSet: function(data) {}
 
 I have a pattern for writing automated tests for my own stored procedures and I regularly exercise documentDBUtils in the course of running those stored procedures. I also have done extensive exploratory testing on DocumentDB's behavior using documentDBUtils... even finding some edge cases in DocumentDB's behavior. :-) However, you cannot run DoucmentDB locally and I don't have the patience to mock it out so there are currently no automated tests.
 
-### What about promises? ###
+### Command line support ###
 
-Promises make the writing of waterfall pattern async much easier. However, I find that they make the writing of complicated ascyn patterns like retries and branching based upon the results of a response much harder. So, I have chosen not to use promises in the implementation of documentDBUtils.
+At the very least it would be nice to provide a "binary" (really just CoffeeScript that starts with #!) that does the count of a collection with optional command-line parameter for filterQuery.
 
-That said, since all of the complex async code is encapsulated inside of documentDBUtils, I want to implement a promises wrapper for documentDBUtils. I would gladly accept a pull-request for this.
-
-### Triggers, UDFs, and Documents ###
-
-As of 2015-05-03, documentDBUtils only supports stored procedures. I personally don't use triggers or UDFs... yet, but we should probably add that. It should be easier because I don't think we'll have the same throttling and resource limit issues with just creating, deleted, and upserting them. Perhaps even more useful (and a little more work) is to support document operations, particularly bulk updates and multi-page queries which should require retry logic.
+However, it might also be nice to create a full CLI that would allow you to specify JavaScript (or even CoffeeScript) files that get pushed to stored procedures and executed. We'd have to support all of the same parameters. Then again, this might be unused functionality.
 
 
 ## MIT License ##

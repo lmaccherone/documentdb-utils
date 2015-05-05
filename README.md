@@ -74,6 +74,15 @@ Now let's write some CoffeeScript (or equivalent JavaScript) to send and execute
 	
 	documentDBUtils(config, processResponse)
 	
+Execute with something like: `cofffe tryHello.coffee`. You should see `Hello world!` as your output.
+
+Note, that we did not include any authorization information or connection strings in our config. That's because it will pull from these two environment variables:
+
+* DOCUMENT_DB_URL - The URL for the DocumentDB
+* DOCUMENT_DB_KEY - The API key
+
+Alternatively, you can provide `config.urlConnection` and `config.auth.masterKey` or any other valid `config.auth` as specified by the DocumentDB API.
+	
 Also, note that the response includes information about the execution. Add `console.log(response.stats)` to the end of your processResponse function to see timings for setup, execution, and lost to throttling as well as the number of round-trips to to stored procedure yields, etc.
 
 Additionally, the response comes back with the links (and full objects) for whatever it needed to fetch to do its job. For this example, it will have `database`, `databaseLink`, `collection`, `collectionLink`, `storedProcedure`, and `storedProcedureLink` fields added to it. You can cache these to speed up subsequent work. For instance, the code below will create the stored procedure and execute (just as we did above) but use the returning storedProcedureLink to execute it a second time, much faster:

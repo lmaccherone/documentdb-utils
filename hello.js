@@ -5,5 +5,3 @@
   };
 
 }).call(this);
-
-//# sourceMappingURL=hello.js.map

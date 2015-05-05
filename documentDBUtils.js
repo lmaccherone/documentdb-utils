@@ -474,5 +474,3 @@
   exports.documentDBUtils = documentDBUtils;
 
 }).call(this);
-
-//# sourceMappingURL=documentDBUtils.js.map

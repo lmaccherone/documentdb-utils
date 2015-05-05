@@ -18,9 +18,7 @@ runSyncNoExit = (command, options) ->
   return {stderr, stdout}
 
 runSyncRaw = (command, options) ->
-  if options? and options.length > 0
-    command += ' ' + options.join(' ')  # !TODO: Not necessary with spanSync as it accepts an args array. Note, my use of "Options" is different from spawnSync's use of Options as its third parameter after args. Mine is like args.
-  output = spawnSync(command)
+  output = spawnSync(command, options)
   stdout = output.stdout?.toString()
   stderr = output.stderr?.toString()
   return {stderr, stdout}
@@ -33,7 +31,6 @@ task('compile', 'Compile CoffeeScript source files to JavaScript', () ->
   )
 )
 
-
 task('test', 'UNIMPLEMENTED - Run the CoffeeScript test suite with nodeunit', () ->
   {reporters} = require('nodeunit')
   process.chdir(__dirname)
@@ -45,33 +42,35 @@ task('test', 'UNIMPLEMENTED - Run the CoffeeScript test suite with nodeunit', ()
 )
 
 task('publish', 'Publish to npm and add git tags', () ->
+  console.log('compiling CoffeeScript')
   process.chdir(__dirname)
-  runSync('cake test')  # Doing this externally to make it synchronous
-  process.chdir(__dirname)
-  runSync('cake compile')
+  runSync('cake', ['compile'])
+
+  # !TODO: generate docs
+
   console.log('checking git status --porcelain')
-  runSync('git status --porcelain', [], (stdout) ->
+  runSync('git', ['status', '--porcelain'], (stdout) ->
     unless stdout?
       console.log('checking origin/master')
-      {stderr, stdout} = runSyncNoExit('git rev-parse origin/master')
+      {stderr, stdout} = runSyncNoExit('git', ['rev-parse', 'origin/master'])
 
       console.log('checking master')
       stdoutOrigin = stdout
-      {stderr, stdout} = runSyncNoExit('git rev-parse master')
+      {stderr, stdout} = runSyncNoExit('git', ['rev-parse', 'master'])
       stdoutMaster = stdout
 
       if stdoutOrigin == stdoutMaster
 
         console.log('running npm publish')
-        runSyncNoExit('npm publish .')
+        runSyncNoExit('npm', ['publish', '.'])
 
         if fs.existsSync('npm-debug.log')
           console.error('`npm publish` failed. See npm-debug.log for details.')
         else
 
           console.log('creating git tag')
-          runSyncNoExit("git tag v#{require('./package.json').version}")
-          runSyncNoExit("git push --tags")
+          runSyncNoExit("git", ["tag", "v#{require('./package.json').version}"])
+          runSyncNoExit("git", ["push", "--tags"])
       else
         console.error('Origin and master out of sync. Not publishing.')
     else

@@ -10,7 +10,7 @@ runSync = (command, options, next) ->
     next(stdout)
   else
     if stdout?.length > 0
-      console.log("Stdout exec'ing command '#{command}'...\n" + stdout)
+      console.log("Stdout running command '#{command}'...\n" + stdout)
 
 runSyncNoExit = (command, options = []) ->
   {stderr, stdout} = runSyncRaw(command, options)
@@ -53,7 +53,6 @@ task('publish', 'Publish to npm and add git tags', () ->
     if stdout.length is 0
       console.log('checking origin/master')
       {stderr, stdout} = runSyncNoExit('git', ['rev-parse', 'origin/master'])
-
       console.log('checking master')
       stdoutOrigin = stdout
       {stderr, stdout} = runSyncNoExit('git', ['rev-parse', 'master'])

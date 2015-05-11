@@ -1,4 +1,4 @@
-{documentDBUtils} = require('./documentDBUtils')
+documentDBUtils = require('./')
 
 {hello} = require('./hello')
 
@@ -15,6 +15,8 @@ processResponse = (err, response) ->
   console.log('First execution including sending stored procedure to DocumentDB')
   console.log(response.memo)
   console.log(response.stats)
+  console.log('storedProcedure')
+  console.dir(response.storedProcedure)
   config2 =
     storedProcedureLink: response.storedProcedureLink
     memo: {}

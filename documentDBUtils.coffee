@@ -2,7 +2,7 @@
 # http://azure.microsoft.com/en-us/documentation/articles/documentdb-nodejs-application/
 # Other functionality here is my own.
 
-# !TODO: Need to paramaterize offerType and other options in here
+# !TODO: I already parameterized offerType for collection creation, but need to add other requestOptions for triggers, sessions, etc. see: http://dl.windowsazure.com/documentDB/nodedocs/global.html#RequestOptions
 # !TODO: Write a stored procedure that will get all context(SPs, UDFs, and Triggers) of a collection
 
 DocumentClient = require("documentdb").DocumentClient
@@ -42,6 +42,8 @@ documentDBUtils = (userConfig, callback) ->
     masterKey: 'Will pull from DOCUMENT_DB_KEY environment variable if not specified.'
     urlConnection: 'Will pull from DOCUMENT_DB_URL environment variable if not specified.'
 
+    offerType: 'offerType to use when creating a new collection'
+
     database: "If you've already fetched it, use this."
     databaseLink: "Alternatively, use the self link."
     databaseID: 'Readable ID.'
@@ -76,6 +78,24 @@ documentDBUtils = (userConfig, callback) ->
         console.dir(content)
         console.log()
 
+  callCallback = (err) ->
+    endTick = new Date().getTime()
+    stats = {}
+    debug("\n")
+    if executionStartTick?
+      stats.executionRoundTrips = executionRoundTrips
+      stats.setupTime = executionStartTick - startTick
+      stats.executionTime = endTick - executionStartTick
+      stats.timeLostToThrottling = timeLostToThrottling
+      debug("Execution round trips (not counting setup or throttling errors): #{stats.executionRoundTrips}")
+      debug("Setup time: #{stats.setupTime}ms")
+      debug("Execution time: #{stats.executionTime}ms")
+      debug("Time lost to throttling: #{stats.timeLostToThrottling}ms")
+    stats.totalTime = endTick - startTick
+    debug("Total time: #{stats.totalTime}ms")
+    config.stats = stats
+    callback(err, config)
+
   # Get client
   unless config.client?
     unless config.urlConnection?
@@ -96,7 +116,7 @@ documentDBUtils = (userConfig, callback) ->
   trySomething = () ->
     debug('trySomething()')
 
-    if config.collectionLink? or config.storedProcedureLink?  # !TODO: Add or triggerLink? and udfLink?
+    if config.collectionLink? or config.storedProcedureLink?  # !TODO: Add "or triggerLink? or udfLink?"
       if tryStoredProcedure()
         # do nothing but verbose
   #    else if tryUDF()
@@ -113,7 +133,7 @@ documentDBUtils = (userConfig, callback) ->
   tryStoredProcedure = () ->
     debug('tryStoredProcedure()')
     if config.storedProcedureJS?
-      upsertStoredProcedure()
+      tryUpsertStoredProcedure()
       return true
     else if config.storedProcedureLink?
       debug("storedProcedureLink", config.storedProcedureLink)
@@ -151,7 +171,7 @@ documentDBUtils = (userConfig, callback) ->
     debug('collectionLink', config.collectionLink)
     documentDBUtils.fetchStoredProcedure(config.client, config.collectionLink, config.storedProcedureID, (err, response, header) ->
       if err?
-        processError(err, header, getStoredProcedureFromID, upsertStoredProcedure)
+        processError(err, header, getStoredProcedureFromID, tryUpsertStoredProcedure)
       else
         debug("response from call to fetchStoredProcedure in getStoredProcedureFromID", response)
         config.storedProcedure = response
@@ -159,15 +179,15 @@ documentDBUtils = (userConfig, callback) ->
         deleteOrExecuteStoredProcedure()
     )
 
-  upsertStoredProcedure = () ->
-    debug('upsertStoredProcedure()')
+  tryUpsertStoredProcedure = () ->
+    debug('tryUpsertStoredProcedure()')
     unless config.storedProcedureID?
       callCallback('Missing storedProcedureID')
     unless config.storedProcedureJS?
       callCallback('Missing storedProcedureJS')
     documentDBUtils.upsertStoredProcedure(config.client, config.collectionLink, config.storedProcedureID, config.storedProcedureJS, (err, response, header) ->
       if err?
-        processError(err, header, upsertStoredProcedure)
+        processError(err, header, tryUpsertStoredProcedure)
       else
         config.storedProcedure = response
         config.storedProcedureLink = response._self
@@ -231,10 +251,19 @@ documentDBUtils = (userConfig, callback) ->
         else
           delete config.storedProcedure
           delete config.storedProcedureLink
-          upsertStoredProcedure()
+          tryUpsertStoredProcedure()
       )
     else
-      callCallback('Need storedProcedureJS to overcome resource constraint.')  # !TODO: We could actually fetch it if it's missing here
+      # !TODO: Never tested the code below which fetches the storedProcedure before retrying the deleteAndUpsert
+      documentDBUtils.fetchStoredProcedure(config.client, config.collectionLink, config.storedProcedureID, (err, response, header) ->
+        if err?
+          processError(err, header, deleteAndUpsertStoredProcedure)
+        else
+          config.storedProcedure = response
+          config.storedProcedureLink = response._self
+          config.storedProcedureJS = response.body
+          deleteAndUpsertStoredProcedure()
+      )
 
   getCollectionLink = () ->
     debug('getCollectionLink()')
@@ -283,24 +312,6 @@ documentDBUtils = (userConfig, callback) ->
     else
       callCallback('Missing database information.')
 
-  callCallback = (err) ->
-    endTick = new Date().getTime()
-    stats = {}
-    debug("\n")
-    if executionStartTick?
-      stats.executionRoundTrips = executionRoundTrips
-      stats.setupTime = executionStartTick - startTick
-      stats.executionTime = endTick - executionStartTick
-      stats.timeLostToThrottling = timeLostToThrottling
-      debug("Execution round trips (not counting setup or throttling errors): #{stats.executionRoundTrips}")
-      debug("Setup time: #{stats.setupTime}ms")
-      debug("Execution time: #{stats.executionTime}ms")
-      debug("Time lost to throttling: #{stats.timeLostToThrottling}ms")
-    stats.totalTime = endTick - startTick
-    debug("Total time: #{stats.totalTime}ms")
-    config.stats = stats
-    callback(err, config)
-
   trySomething()
 
 ###*
@@ -341,7 +352,8 @@ documentDBUtils.getOrCreateCollection = (client, databaseLink, collectionID, cal
     else
       if results.length is 0
         collectionSpec = id: collectionID
-        requestOptions = offerType: "S1"
+        offerType = config.offerType or "S1"
+        requestOptions = {offerType}
         client.createCollection(databaseLink, collectionSpec, requestOptions, (err, created) ->
           if err
             callback(err)
@@ -352,26 +364,26 @@ documentDBUtils.getOrCreateCollection = (client, databaseLink, collectionID, cal
         callback(null, results[0])
   )
 
-documentDBUtils.upsertStoredProcedure = (client, collectionLink, storedProcID, storedProc, callback) ->  # !TODO: Upgrade to use fetchStoredProcedure
+documentDBUtils.upsertStoredProcedure = (client, collectionLink, storedProcedureID, storedProcedureJS, callback) ->
   querySpec =
     query: "SELECT * FROM root r WHERE r.id=@id"
-    parameters: [{name: "@id", value: storedProcID}]
+    parameters: [{name: "@id", value: storedProcedureID}]
 
   client.queryStoredProcedures(collectionLink, querySpec).toArray((err, results) ->
     if err
       callback(err)
     else
-      storedProcSpec = {id: storedProcID, body: storedProc}
+      storedProcedureSpec = {id: storedProcedureID, body: storedProcedureJS}
       if results.length is 0
-        client.createStoredProcedure(collectionLink, storedProcSpec, (err, created) ->
+        client.createStoredProcedure(collectionLink, storedProcedureSpec, (err, created) ->
           if err
             callback(err)
           else
             callback(null, created)
         )
       else
-        sprocLink = results[0]._self
-        client.replaceStoredProcedure(sprocLink, storedProcSpec, (err, replaced) ->
+        storedProcedureLink = results[0]._self
+        client.replaceStoredProcedure(storedProcedureLink, storedProcedureSpec, (err, replaced) ->
           if err
             callback(err)
           else
@@ -379,19 +391,19 @@ documentDBUtils.upsertStoredProcedure = (client, collectionLink, storedProcID, s
         )
   )
 
-documentDBUtils.fetchStoredProcedure = (client, collectionLink, storedProcID, callback) ->
+documentDBUtils.fetchStoredProcedure = (client, collectionLink, storedProcedureID, callback) ->
   querySpec =
     query: "SELECT * FROM root r WHERE r.id=@id"
-    parameters: [{name: "@id", value: storedProcID}]
+    parameters: [{name: "@id", value: storedProcedureID}]
 
   client.queryStoredProcedures(collectionLink, querySpec).toArray((err, results) ->
     if err
       callback(err)
     else if results.length is 0
-      callback("Could not find stored procedure #{storedProcID}.")
+      callback("Could not find stored procedure #{storedProcedureID}.")
     else
       callback(null, results[0])
   )
 
 
-exports.documentDBUtils = documentDBUtils
+module.exports = documentDBUtils

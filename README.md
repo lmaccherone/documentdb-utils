@@ -22,7 +22,7 @@ In summary, documentDBUtils takes care of all of this for you and makes it much 
 
 * Automatically handles 429 throttling responses by delaying the specified amount of time and retrying.
 
-* Automatically deals with early termination of stored procedures for exceeding resources. Just follow a simple pattern (memoization like that used in a reduce function) for writing your stored procedures. The state will be shipped back to the calling side and the stored procedure will be called again picking back up right where it left off. **Note as of 2015-05-03, it also deletes and recreates the stored procedure that violated the resource constraint as a work-around for [the bug?/expected behavior?](http://stackoverflow.com/questions/29978925/documentdb-stored-procedure-blocked) causing any such stored procedure to be black listed.**
+* Automatically deals with early termination of stored procedures for exceeding resources. Just follow a simple pattern (memoization like that used in a reduce function) for writing your stored procedures. The state will be shipped back to the calling side and the stored procedure will be called again picking back up right where it left off. **Note as of 2015-05-03, it also deletes and recreates the stored procedure that violated the resource constraint as a work-around for [the bug?/expected behavior?](http://stackoverflow.com/questions/29978925/documentdb-stored-procedure-blocked) causing any such stored procedure to be black listed. It's designed to avoid ever getting this message `{"Errors":["The script with id 'xxx' is blocked for execution because it has violated its allowed resource limit several times."]}`**
 
 * Full traceability while executing by setting debug=true.
 
@@ -56,7 +56,7 @@ or if you prefer JavaScript saved in hello.js.
    
 Now let's write some CoffeeScript (or equivalent JavaScript) to send and execute this on the server:
 
-	{documentDBUtils} = require('./documentDBUtils')
+	documentDBUtils = require('documentdb-utils')
 	
 	{hello} = require('./hello')
 	
@@ -87,7 +87,7 @@ Also, note that the response includes information about the execution. Add `cons
 
 Additionally, the response comes back with the links (and full objects) for whatever it needed to fetch to do its job. For this example, it will have `database`, `databaseLink`, `collection`, `collectionLink`, `storedProcedure`, and `storedProcedureLink` fields added to it. You can cache these to speed up subsequent work. For instance, the code below will create the stored procedure and execute (just as we did above) but use the returning storedProcedureLink to execute it a second time, much faster:
 
-	{documentDBUtils} = require('./documentDBUtils')
+	documentDBUtils = require('documentdb-utils')
 	
 	{hello} = require('./hello')
 	
@@ -225,6 +225,7 @@ Here is an example of a stored procedure that counts all the documents in a coll
 
 ## Changelog ##
 
+* 0.1.2 - 2015-05-11 - Changed entry point to work via npm
 * 0.1.1 - 2015-05-04 - Fixed `cake publish`
 * 0.1.0 - 2015-05-03 - Initial release
 

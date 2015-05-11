@@ -41,5 +41,3 @@
   documentDBUtils(config, processResponse);
 
 }).call(this);
-
-//# sourceMappingURL=try.js.map

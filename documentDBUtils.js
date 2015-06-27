@@ -246,7 +246,7 @@
         executionRoundTrips++;
         config.memo = response;
         if (response.continuation != null) {
-          if (response.stillResources) {
+          if (response.stillQueuingOperations) {
             return executeStoredProcedure();
           } else {
             return deleteAndUpsertStoredProcedure();
@@ -485,3 +485,5 @@
   module.exports = documentDBUtils;
 
 }).call(this);
+
+//# sourceMappingURL=documentDBUtils.js.map

@@ -230,10 +230,10 @@ documentDBUtils = (userConfig, callback) ->
       config.memo = response
       if response.continuation?
 
-        if response.stillResources
+        if response.stillQueuingOperations
           executeStoredProcedure()
         else
-          deleteAndUpsertStoredProcedure()
+          deleteAndUpsertStoredProcedure()  # !TODO: stop deleting and test now that blacklisting bug is fixed.
       else
         callCallback(null)
 

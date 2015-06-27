@@ -28,9 +28,11 @@
   "license": "MIT",
   "devDependencies": {
     "coffee-script": "^1.9.2",
-    "jsdoc": "^3.2.0"
+    "jsdoc": "^3.2.0",
+    "nodeunit": "^0.9.1"
   },
   "dependencies": {
-    "documentdb": "^1.0.0"
+    "documentdb": "^1.0.0",
+    "rewire": "^2.3.3"
   }
 }

@@ -55,4 +55,4 @@
 
 }).call(this);
 
-//# sourceMappingURL=count.js.map
+//# sourceMappingURL=countDocuments.js.map

@@ -1,5 +1,5 @@
 rewire = require("rewire")
-generateData = rewire('../src/generateData')
+generateData = rewire('../stored-procedures/createVariedDocuments')
 DocumentDBMock = require('../DocumentDBMock')
 mock = new DocumentDBMock(generateData)
 

@@ -13,7 +13,7 @@
 ###
 
 rewire = require("rewire")
-count = rewire('../src/count')
+count = rewire('../stored-procedures/countDocuments')
 DocumentDBMock = require('../DocumentDBMock')
 mock = new DocumentDBMock(count)
 

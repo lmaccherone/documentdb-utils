@@ -3,7 +3,7 @@ documentDBUtils = require('../documentDBUtils')
 filterQuery = null
 #filterQuery = "SELECT * FROM c WHERE c.Severity = 2"
 
-{count} = require('./../src/count')
+{count} = require('../stored-procedures/countDocuments')
 config =
   databaseID: 'test-stored-procedure'
   collectionID: 'test-stored-procedure'

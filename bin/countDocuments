@@ -2,4 +2,4 @@
 
 path = require('path')
 
-require(path.join(__dirname, 'countDocuments.coffee'))
+require(path.join(__dirname, '..', 'src', 'countDocuments.coffee'))

@@ -123,6 +123,19 @@
                   }
                 }
                 return _this.nextCollectionOperationQueued;
+              },
+              deleteDocument: function(lastEntityLink, lastOptions, callback) {
+                _this.lastEntityLink = lastEntityLink;
+                _this.lastOptions = lastOptions;
+                _this._shiftNextCollectionOperationQueued();
+                if (_this.nextCollectionOperationQueued) {
+                  _this.rows.push(_this.lastEntityLink);
+                  if (callback != null) {
+                    _this._shiftNext();
+                    callback(_this.nextError, _this.nextResources, _this.nextOptions);
+                  }
+                }
+                return _this.nextCollectionOperationQueued;
               }
             };
           };

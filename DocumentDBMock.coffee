@@ -79,4 +79,13 @@ class DocumentDBMock
             callback(@nextError, @nextResources, @nextOptions)
         return @nextCollectionOperationQueued
 
+      deleteDocument: (@lastEntityLink, @lastOptions, callback) =>
+        @_shiftNextCollectionOperationQueued()
+        if @nextCollectionOperationQueued
+          @rows.push(@lastEntityLink)
+          if callback?
+            @_shiftNext()
+            callback(@nextError, @nextResources, @nextOptions)
+        return @nextCollectionOperationQueued
+
 module.exports = DocumentDBMock

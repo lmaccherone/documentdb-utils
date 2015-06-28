@@ -68,4 +68,15 @@ class DocumentDBMock
             callback(@nextError, @nextResources, @nextOptions)
         return @nextCollectionOperationQueued
 
+      replaceDocument: (@lastEntityLink, @lastRow, @lastOptions, callback) =>
+        unless @lastRow?.id?
+          throw new Error("The input content is invalid because the required property, id, is missing.")
+        @_shiftNextCollectionOperationQueued()
+        if @nextCollectionOperationQueued
+          @rows.push(@lastRow)
+          if callback?
+            @_shiftNext()
+            callback(@nextError, @nextResources, @nextOptions)
+        return @nextCollectionOperationQueued
+
 module.exports = DocumentDBMock

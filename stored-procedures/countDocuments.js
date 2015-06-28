@@ -14,6 +14,9 @@
     if (memo.continuation == null) {
       memo.continuation = null;
     }
+    if (memo.example == null) {
+      memo.example = null;
+    }
     stillQueuingOperations = true;
     query = function() {
       var responseOptions;
@@ -36,6 +39,7 @@
       }
       count = resources.length;
       memo.count += count;
+      memo.example = resources[0];
       if (options.continuation != null) {
         memo.continuation = options.continuation;
         return query();

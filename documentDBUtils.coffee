@@ -123,10 +123,16 @@ documentDBUtils = (userConfig, callback) ->
   #      # verbose
   #    else if tryTrigger()
   #      # verbose
-  #    else if tryDocumentOperations()
-  #      # verbose
       else
-        callCallback('No stored procedure, trigger, UDF or document operations specified.')
+        callCallback('No stored procedure, trigger, or UDF operations specified.')
+    else if config.documentLink?
+      if config.newDocument?
+        if config.oldDocument?
+          throw new Error('Replace document not implemented yet')
+        else
+          throw new Error('Create document not implemented yet')
+      else
+        readDocument()
     else
       getCollectionLink()
 
@@ -165,6 +171,17 @@ documentDBUtils = (userConfig, callback) ->
       nextIfNot429()
     else
       callCallback(err)
+
+  readDocument = () ->
+    debug('readDocument()')
+    debug('documentLink', config.documentLink)
+    config.client.readDocument(config.documentLink, (err, response, header) ->
+      if err?
+        processError(err, header, readDocumentFromID)
+      else
+        config.document = response
+        callCallback(null)
+    )
 
   getStoredProcedureFromID = () ->
     debug('getStoredProcedureFromID()')

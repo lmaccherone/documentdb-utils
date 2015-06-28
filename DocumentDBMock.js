@@ -105,6 +105,24 @@
                   }
                 }
                 return _this.nextCollectionOperationQueued;
+              },
+              replaceDocument: function(lastEntityLink, lastRow, lastOptions, callback) {
+                var ref;
+                _this.lastEntityLink = lastEntityLink;
+                _this.lastRow = lastRow;
+                _this.lastOptions = lastOptions;
+                if (((ref = _this.lastRow) != null ? ref.id : void 0) == null) {
+                  throw new Error("The input content is invalid because the required property, id, is missing.");
+                }
+                _this._shiftNextCollectionOperationQueued();
+                if (_this.nextCollectionOperationQueued) {
+                  _this.rows.push(_this.lastRow);
+                  if (callback != null) {
+                    _this._shiftNext();
+                    callback(_this.nextError, _this.nextResources, _this.nextOptions);
+                  }
+                }
+                return _this.nextCollectionOperationQueued;
               }
             };
           };

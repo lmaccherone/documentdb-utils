@@ -8,6 +8,8 @@ count = (memo) ->
     memo.count = 0
   unless memo.continuation?
     memo.continuation = null
+  unless memo.example?
+    memo.example = null
 
   stillQueuingOperations = true
 
@@ -31,6 +33,7 @@ count = (memo) ->
 
     count = resources.length
     memo.count += count
+    memo.example = resources[0]
     if options.continuation?
       memo.continuation = options.continuation
       query()

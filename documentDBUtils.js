@@ -44,7 +44,7 @@
    */
 
   documentDBUtils = function(userConfig, callback) {
-    var callCallback, config, debug, delay, deleteAndUpsertStoredProcedure, deleteOrExecuteStoredProcedure, executeStoredProcedure, executionRoundTrips, executionStartTick, getCollectionLink, getDatabaseLink, getStoredProcedureFromID, masterKey, options, processError, processResponse, startTick, timeLostToThrottling, trySomething, tryStoredProcedure, tryUpsertStoredProcedure, urlConnection;
+    var callCallback, config, debug, delay, deleteAndUpsertStoredProcedure, deleteOrExecuteStoredProcedure, executeStoredProcedure, executionRoundTrips, executionStartTick, getCollectionLink, getDatabaseLink, getStoredProcedureFromID, masterKey, options, processError, processResponse, readDocument, startTick, timeLostToThrottling, trySomething, tryStoredProcedure, tryUpsertStoredProcedure, urlConnection;
     options = {
       client: "If you've already instantiated the DocumentClient pass it in with this.",
       auth: 'Allow for full configuration of auth per DocumentClient API.',
@@ -126,7 +126,17 @@
         if (tryStoredProcedure()) {
 
         } else {
-          return callCallback('No stored procedure, trigger, UDF or document operations specified.');
+          return callCallback('No stored procedure, trigger, or UDF operations specified.');
+        }
+      } else if (config.documentLink != null) {
+        if (config.newDocument != null) {
+          if (config.oldDocument != null) {
+            throw new Error('Replace document not implemented yet');
+          } else {
+            throw new Error('Create document not implemented yet');
+          }
+        } else {
+          return readDocument();
         }
       } else {
         return getCollectionLink();
@@ -173,6 +183,18 @@
       } else {
         return callCallback(err);
       }
+    };
+    readDocument = function() {
+      debug('readDocument()');
+      debug('documentLink', config.documentLink);
+      return config.client.readDocument(config.documentLink, function(err, response, header) {
+        if (err != null) {
+          return processError(err, header, readDocumentFromID);
+        } else {
+          config.document = response;
+          return callCallback(null);
+        }
+      });
     };
     getStoredProcedureFromID = function() {
       debug('getStoredProcedureFromID()');

@@ -18,11 +18,15 @@ In summary, documentDBUtils takes care of all of this for you and makes it much 
 
 ### Working ###
 
+* All Stored Procedure operations
+
+* All single-document operations (except Attachments) 
+
 * Use the human readable IDs to perform operations rather than needing to pre-fetch the database, collection, or entity links.
 
 * Automatically handles 429 throttling responses by delaying the specified amount of time and retrying.
 
-* Automatically deals with early termination of stored procedures for exceeding resources. Just follow a simple pattern (memoization like that used in a reduce function) for writing your stored procedures. The state will be shipped back to the calling side and the stored procedure will be called again picking back up right where it left off. **Note as of 2015-05-03, it also deletes and recreates the stored procedure that violated the resource constraint as a work-around for [the bug?/expected behavior?](http://stackoverflow.com/questions/29978925/documentdb-stored-procedure-blocked) causing any such stored procedure to be black listed. It's designed to avoid ever getting this message `{"Errors":["The script with id 'xxx' is blocked for execution because it has violated its allowed resource limit several times."]}`**
+* Automatically deals with early termination of stored procedures for exceeding resources. Just follow a simple pattern (memoization like that used in a reduce function) for writing your stored procedures. The state will be shipped back to the calling side and the stored procedure will be called again picking back up right where it left off.
 
 * Full traceability while executing by setting debug=true.
 
@@ -30,10 +34,11 @@ In summary, documentDBUtils takes care of all of this for you and makes it much 
 
 ### Unimplemented ###
 
-* Triggers, UDFs, and Documents. As of 2015-05-03, documentDBUtils only supports stored procedures.
+* Triggers, UDFs, and Attachments.
 
-* Delete Databases or Collections. We automatically create them if they are referenced, but we have not funtionality for deleting them.
+* Queries and bulk document reads.
 
+* Delete Databases or Collections. We automatically create them if they are referenced, but we have no funtionality for deleting them.
 
 
 ## Install ##
@@ -42,6 +47,8 @@ In summary, documentDBUtils takes care of all of this for you and makes it much 
 
 
 ## Usage ##
+
+### A Stored Procedure Example ###
 
 Let's say you wrote this little stored procedure and saved it in hello.coffee.
 
@@ -145,7 +152,9 @@ Notice how documentDBUtils figures out what you want to do by what you send to i
 | Yes                           | Yes               | No   | Upsert             |
 | Yes                           | No                | No   | Delete             |
 
-The following table applies to document operations:
+### Document Operations ###
+
+Document operations work pretty much the same way. Give it the right fields in the config object and documentDBUtils figures out what to do with it. The following table determines which document operations are performed with a given set of config fields:
 
 | documentLink | oldDocument | document | Operation |
 | :----------: | :---------: | :------: | :-------: |
@@ -157,9 +166,9 @@ The following table applies to document operations:
 | Yes          | Yes         | No       | Delete    |
 | No           | Yes         | No       | Delete    |
 
-For Delete, we don't actually need the entire oldDocument. We simply need the _etag field. If you do not supply the documentLink seperately, we will pull both the documentLink and the needed _etag, and id fields from the oldDocument.
+For Delete, we don't actually need the entire oldDocument. We simply need the _etag field. If you do not supply the documentLink seperately, we will pull both the documentLink and the needed _etag fields from the oldDocument.
 
-\* Note, at this time, Update and Replace are actually full replace operations. It's my intent to upgrade it so that on update operations, if you provide only a partial list of field, it will pull the remaining fields from the oldDocument and be a true update operation. The replace operation is still triggerable by not supplying an oldDocument. 
+\* Note, at this time, Update and Replace are actually full replace operations. It's my intent to upgrade it so that on update operations, if you provide only a partial list of fields, it will pull the remaining fields from the oldDocument and be a true update operation. The replace operation will still be triggerable by not supplying an oldDocument. 
 
 
 ## Pattern for writing stored procedures ##
@@ -233,7 +242,7 @@ Here is an example of a stored procedure that counts all the documents in a coll
 
 ## Changelog ##
 
-* 0.2.0 - 2015-06-27 - Added mock testing using DocumentDBMock
+* 0.2.0 - 2015-06-27 - Added document operations. Removed blacklist hack.
 * 0.1.2 - 2015-05-11 - Changed entry point to work via npm
 * 0.1.1 - 2015-05-04 - Fixed `cake publish`
 * 0.1.0 - 2015-05-03 - Initial release
@@ -241,9 +250,9 @@ Here is an example of a stored procedure that counts all the documents in a coll
 
 ## Contributing to documentDBUtils ##
 
-### Triggers, UDFs, and Documents ###
+### Triggers, UDFs, Queries, and Attachments ###
 
-As of 2015-05-03, documentDBUtils only supports stored procedures. I personally don't use triggers or UDFs... yet, but we should probably add that. It should be easier because I don't think we'll have the same throttling and resource limit issues with just creating, deleted, and upserting them. Perhaps even more useful (and a little more work) is to support document operations, particularly bulk updates and multi-page queries which should require retry logic.
+As of 2015-05-03, documentDBUtils only supports stored procedures and single-document operations. If you need them, add them and submit a pull request.
 
 ### Delete Databases or Collections ###
 
@@ -251,7 +260,7 @@ Should be easy.
 
 ### Explicitly specify an operation ###
 
-I realize that this design decision of automatically choosing an operation based upon which parameters are provided might be controversial. If we added an optional "operation" field, then we could check to confirm that they provided the right config fields for that operation.
+I realize that this design decision of automatically choosing an operation based upon which config.fields are provided might be controversial. If we added an optional "operation" field, then we could check to confirm that they provided the right config fields for that operation.
 
 ### What about promises? ###
 

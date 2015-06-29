@@ -26,6 +26,10 @@
   ],
   "author": "Larry Maccherone",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "http://github.com/lmaccherone/documentdb-utils.git"
+  },
   "devDependencies": {
     "coffee-script": "^1.9.2",
     "jsdoc": "^3.2.0",

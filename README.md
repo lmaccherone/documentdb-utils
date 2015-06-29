@@ -242,7 +242,8 @@ Here is an example of a stored procedure that counts all the documents in a coll
 
 ## Changelog ##
 
-* 0.2.0 - 2015-06-27 - Added document operations. Removed blacklist hack.
+* 0.2.0 - 2015-06-28 - Added repository link (meant to go 0.2 in prior version)
+* 0.1.3 - 2015-06-27 - Added document operations. Removed blacklist hack.
 * 0.1.2 - 2015-05-11 - Changed entry point to work via npm
 * 0.1.1 - 2015-05-04 - Fixed `cake publish`
 * 0.1.0 - 2015-05-03 - Initial release

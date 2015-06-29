@@ -27,7 +27,7 @@ task('compile', 'Compile CoffeeScript source files to JavaScript', () ->
   process.chdir(__dirname)
   fs.readdir('./', (err, contents) ->
     files = ("#{file}" for file in contents when (file.indexOf('.coffee') > 0))
-    runSync('coffee', ['-c'].concat(files))
+    runSync('coffee', ['--map', '-c'].concat(files))
   )
 )
 

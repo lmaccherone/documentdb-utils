@@ -123,16 +123,23 @@ documentDBUtils = (userConfig, callback) ->
   #      # verbose
   #    else if tryTrigger()
   #      # verbose
+      else if config.document? and !config.oldDocument? and !config.documentLink?
+        createDocument()
       else
-        callCallback('No stored procedure, trigger, or UDF operations specified.')
-    else if config.documentLink?
-      if config.newDocument?
-        if config.oldDocument?
-          throw new Error('Replace document not implemented yet')
-        else
-          throw new Error('Create document not implemented yet')
-      else
+        callCallback('No stored procedure or document create operation specified.')
+    else if config.documentLink? or config.oldDocument?
+      if !config.documentLink? and !config.oldDocument and config.document?
+        createDocument()
+      else if config.documentLink? and !config.oldDocument and !config.document?
         readDocument()
+      else if config.documentLink? and config.oldDocument and config.document?
+        updateDocument()
+      else if !config.documentLink? and config.oldDocument and config.document?
+        updateDocument()
+      else if config.oldDocument and !config.document?
+        deleteDocument()  # Needs to get documentLink from oldDocument if missing
+    else if config.document? and config.collectionLink?
+      createDocument()
     else
       getCollectionLink()
 
@@ -172,12 +179,65 @@ documentDBUtils = (userConfig, callback) ->
     else
       callCallback(err)
 
+  createDocument = () ->
+    debug('createDocument()')
+    config.client.createDocument(config.collectionLink, config.document, (err, response, header) ->
+      if err?
+        processError(err, header, createDocument)
+      else
+        config.document = response
+        callCallback(null)
+    )
+
   readDocument = () ->
     debug('readDocument()')
     debug('documentLink', config.documentLink)
     config.client.readDocument(config.documentLink, (err, response, header) ->
       if err?
-        processError(err, header, readDocumentFromID)
+        processError(err, header, readDocument)
+      else
+        config.document = response
+        callCallback(null)
+    )
+
+  updateDocument = () ->
+    debug('updateDocument()')
+    # !TODO: Need to pull old fields from oldDocument before calling replaceDocument
+    replaceDocument()
+
+  replaceDocument = () ->
+    debug('replaceDocument()')
+    unless config.documentLink?
+      config.documentLink = config.oldDocument._self
+    if config.oldDocument?._self? and (config.documentLink isnt config.oldDocument._self)
+      throw new Error("documentLink and oldDocument._self don't match")
+    unless config.document.id?
+      config.document.id = config.oldDocument.id
+    if config.oldDocument.id? and (config.document.id isnt config.oldDocument.id)
+      throw new Error("IDs don't match between document and oldDocument")
+    if config.oldDocument?._etag?
+      etag = config.oldDocument._etag
+      replaceOptions = {etag, "if-match": etag}  # There is no indication in the docs that the DocumentDB node.js client supports etag/if-match optimistic concurrency but I'm including just in case
+    console.log('config.document', config.document)
+    config.client.replaceDocument(config.documentLink, config.document, replaceOptions, (err, response, header) ->
+      if err?
+        processError(err, header, replaceDocument)
+      else
+        config.document = response
+        callCallback(null)
+    )
+
+  deleteDocument = () ->
+    debug('deleteDocument()')
+    unless config.documentLink?
+      config.documentLink = config.oldDocument._self
+    debug('documentLink', config.documentLink)
+    if config.oldDocument?._etag?
+      etag = config.oldDocument._etag
+      deleteOptions = {etag, "if-match": etag}  # There is no indication in the docs that the DocumentDB node.js client supports etag/if-match optimistic concurrency but I'm including just in case
+    config.client.deleteDocument(config.documentLink, deleteOptions, (err, response, header) ->
+      if err?
+        processError(err, header, readDocument)
       else
         config.document = response
         callCallback(null)
@@ -247,40 +307,45 @@ documentDBUtils = (userConfig, callback) ->
       config.memo = response
       if response.continuation?
 
-        if response.stillQueuingOperations
-          executeStoredProcedure()
-        else
-          deleteAndUpsertStoredProcedure()  # !TODO: stop deleting and test now that blacklisting bug is fixed.
+#        # The code below is commented out because it was a hack to work around a blacklisting bug in DocumentDB that has been fixed.
+#        # If documentDBUtils continues to work as expected after its removal then we can delete the lines below and the entire deleteAndUpsertStoredProcedure function.
+#        if response.stillQueuingOperations
+#          executeStoredProcedure()
+#        else
+#          deleteAndUpsertStoredProcedure()
+
+        executeStoredProcedure()
+
       else
         callCallback(null)
 
-  deleteAndUpsertStoredProcedure = () ->
-    # This is a total hack to overcome the fact that when you get an out of resources (false) response when you
-    # do any operations on a collection from inside of your stored procedure. According to this:
-    #   http://stackoverflow.com/questions/29978925/documentdb-stored-procedure-blocked
-    # this might be a bug. If it gets fixed, we can remove this hack.
-    debug('Got out of resources messages on this stored procedure. Deleting and upserting.')
-    config.storedProcedureJS = config.storedProcedureJS or config.storedProcedure?.body
-    if config.storedProcedureJS?
-      config.client.deleteStoredProcedure(config.storedProcedureLink, (err, response, header) ->
-        if err?
-          processError(err, header, deleteAndUpsertStoredProcedure)
-        else
-          delete config.storedProcedure
-          delete config.storedProcedureLink
-          tryUpsertStoredProcedure()
-      )
-    else
-      # !TODO: Never tested the code below which fetches the storedProcedure before retrying the deleteAndUpsert
-      documentDBUtils.fetchStoredProcedure(config.client, config.collectionLink, config.storedProcedureID, (err, response, header) ->
-        if err?
-          processError(err, header, deleteAndUpsertStoredProcedure)
-        else
-          config.storedProcedure = response
-          config.storedProcedureLink = response._self
-          config.storedProcedureJS = response.body
-          deleteAndUpsertStoredProcedure()
-      )
+#  deleteAndUpsertStoredProcedure = () ->
+#    # This is a total hack to overcome the fact that when you get an out of resources (false) response when you
+#    # do any operations on a collection from inside of your stored procedure. According to this:
+#    #   http://stackoverflow.com/questions/29978925/documentdb-stored-procedure-blocked
+#    # this might be a bug. If it gets fixed, we can remove this hack.
+#    debug('Got out of resources messages on this stored procedure. Deleting and upserting.')
+#    config.storedProcedureJS = config.storedProcedureJS or config.storedProcedure?.body
+#    if config.storedProcedureJS?
+#      config.client.deleteStoredProcedure(config.storedProcedureLink, (err, response, header) ->
+#        if err?
+#          processError(err, header, deleteAndUpsertStoredProcedure)
+#        else
+#          delete config.storedProcedure
+#          delete config.storedProcedureLink
+#          tryUpsertStoredProcedure()
+#      )
+#    else
+#      # !TODO: Never tested the code below which fetches the storedProcedure before retrying the deleteAndUpsert
+#      documentDBUtils.fetchStoredProcedure(config.client, config.collectionLink, config.storedProcedureID, (err, response, header) ->
+#        if err?
+#          processError(err, header, deleteAndUpsertStoredProcedure)
+#        else
+#          config.storedProcedure = response
+#          config.storedProcedureLink = response._self
+#          config.storedProcedureJS = response.body
+#          deleteAndUpsertStoredProcedure()
+#      )
 
   getCollectionLink = () ->
     debug('getCollectionLink()')

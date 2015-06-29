@@ -44,7 +44,7 @@
    */
 
   documentDBUtils = function(userConfig, callback) {
-    var callCallback, config, debug, delay, deleteAndUpsertStoredProcedure, deleteOrExecuteStoredProcedure, executeStoredProcedure, executionRoundTrips, executionStartTick, getCollectionLink, getDatabaseLink, getStoredProcedureFromID, masterKey, options, processError, processResponse, readDocument, startTick, timeLostToThrottling, trySomething, tryStoredProcedure, tryUpsertStoredProcedure, urlConnection;
+    var callCallback, config, createDocument, debug, delay, deleteDocument, deleteOrExecuteStoredProcedure, executeStoredProcedure, executionRoundTrips, executionStartTick, getCollectionLink, getDatabaseLink, getStoredProcedureFromID, masterKey, options, processError, processResponse, readDocument, replaceDocument, startTick, timeLostToThrottling, trySomething, tryStoredProcedure, tryUpsertStoredProcedure, updateDocument, urlConnection;
     options = {
       client: "If you've already instantiated the DocumentClient pass it in with this.",
       auth: 'Allow for full configuration of auth per DocumentClient API.',
@@ -125,19 +125,25 @@
       if ((config.collectionLink != null) || (config.storedProcedureLink != null)) {
         if (tryStoredProcedure()) {
 
+        } else if ((config.document != null) && (config.oldDocument == null) && (config.documentLink == null)) {
+          return createDocument();
         } else {
-          return callCallback('No stored procedure, trigger, or UDF operations specified.');
+          return callCallback('No stored procedure or document create operation specified.');
         }
-      } else if (config.documentLink != null) {
-        if (config.newDocument != null) {
-          if (config.oldDocument != null) {
-            throw new Error('Replace document not implemented yet');
-          } else {
-            throw new Error('Create document not implemented yet');
-          }
-        } else {
+      } else if ((config.documentLink != null) || (config.oldDocument != null)) {
+        if ((config.documentLink == null) && !config.oldDocument && (config.document != null)) {
+          return createDocument();
+        } else if ((config.documentLink != null) && !config.oldDocument && (config.document == null)) {
           return readDocument();
+        } else if ((config.documentLink != null) && config.oldDocument && (config.document != null)) {
+          return updateDocument();
+        } else if ((config.documentLink == null) && config.oldDocument && (config.document != null)) {
+          return updateDocument();
+        } else if (config.oldDocument && (config.document == null)) {
+          return deleteDocument();
         }
+      } else if ((config.document != null) && (config.collectionLink != null)) {
+        return createDocument();
       } else {
         return getCollectionLink();
       }
@@ -184,12 +190,82 @@
         return callCallback(err);
       }
     };
+    createDocument = function() {
+      debug('createDocument()');
+      return config.client.createDocument(config.collectionLink, config.document, function(err, response, header) {
+        if (err != null) {
+          return processError(err, header, createDocument);
+        } else {
+          config.document = response;
+          return callCallback(null);
+        }
+      });
+    };
     readDocument = function() {
       debug('readDocument()');
       debug('documentLink', config.documentLink);
       return config.client.readDocument(config.documentLink, function(err, response, header) {
         if (err != null) {
-          return processError(err, header, readDocumentFromID);
+          return processError(err, header, readDocument);
+        } else {
+          config.document = response;
+          return callCallback(null);
+        }
+      });
+    };
+    updateDocument = function() {
+      debug('updateDocument()');
+      return replaceDocument();
+    };
+    replaceDocument = function() {
+      var etag, ref, ref1, replaceOptions;
+      debug('replaceDocument()');
+      if (config.documentLink == null) {
+        config.documentLink = config.oldDocument._self;
+      }
+      if ((((ref = config.oldDocument) != null ? ref._self : void 0) != null) && (config.documentLink !== config.oldDocument._self)) {
+        throw new Error("documentLink and oldDocument._self don't match");
+      }
+      if (config.document.id == null) {
+        config.document.id = config.oldDocument.id;
+      }
+      if ((config.oldDocument.id != null) && (config.document.id !== config.oldDocument.id)) {
+        throw new Error("IDs don't match between document and oldDocument");
+      }
+      if (((ref1 = config.oldDocument) != null ? ref1._etag : void 0) != null) {
+        etag = config.oldDocument._etag;
+        replaceOptions = {
+          etag: etag,
+          "if-match": etag
+        };
+      }
+      console.log('config.document', config.document);
+      return config.client.replaceDocument(config.documentLink, config.document, replaceOptions, function(err, response, header) {
+        if (err != null) {
+          return processError(err, header, replaceDocument);
+        } else {
+          config.document = response;
+          return callCallback(null);
+        }
+      });
+    };
+    deleteDocument = function() {
+      var deleteOptions, etag, ref;
+      debug('deleteDocument()');
+      if (config.documentLink == null) {
+        config.documentLink = config.oldDocument._self;
+      }
+      debug('documentLink', config.documentLink);
+      if (((ref = config.oldDocument) != null ? ref._etag : void 0) != null) {
+        etag = config.oldDocument._etag;
+        deleteOptions = {
+          etag: etag,
+          "if-match": etag
+        };
+      }
+      return config.client.deleteDocument(config.documentLink, deleteOptions, function(err, response, header) {
+        if (err != null) {
+          return processError(err, header, readDocument);
         } else {
           config.document = response;
           return callCallback(null);
@@ -268,41 +344,10 @@
         executionRoundTrips++;
         config.memo = response;
         if (response.continuation != null) {
-          if (response.stillQueuingOperations) {
-            return executeStoredProcedure();
-          } else {
-            return deleteAndUpsertStoredProcedure();
-          }
+          return executeStoredProcedure();
         } else {
           return callCallback(null);
         }
-      }
-    };
-    deleteAndUpsertStoredProcedure = function() {
-      var ref;
-      debug('Got out of resources messages on this stored procedure. Deleting and upserting.');
-      config.storedProcedureJS = config.storedProcedureJS || ((ref = config.storedProcedure) != null ? ref.body : void 0);
-      if (config.storedProcedureJS != null) {
-        return config.client.deleteStoredProcedure(config.storedProcedureLink, function(err, response, header) {
-          if (err != null) {
-            return processError(err, header, deleteAndUpsertStoredProcedure);
-          } else {
-            delete config.storedProcedure;
-            delete config.storedProcedureLink;
-            return tryUpsertStoredProcedure();
-          }
-        });
-      } else {
-        return documentDBUtils.fetchStoredProcedure(config.client, config.collectionLink, config.storedProcedureID, function(err, response, header) {
-          if (err != null) {
-            return processError(err, header, deleteAndUpsertStoredProcedure);
-          } else {
-            config.storedProcedure = response;
-            config.storedProcedureLink = response._self;
-            config.storedProcedureJS = response.body;
-            return deleteAndUpsertStoredProcedure();
-          }
-        });
       }
     };
     getCollectionLink = function() {

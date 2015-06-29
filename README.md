@@ -145,6 +145,22 @@ Notice how documentDBUtils figures out what you want to do by what you send to i
 | Yes                           | Yes               | No   | Upsert             |
 | Yes                           | No                | No   | Delete             |
 
+The following table applies to document operations:
+
+| documentLink | oldDocument | document | Operation |
+| :----------: | :---------: | :------: | :-------: |
+| No           | No          | Yes      | Create    |
+| Yes          | No          | No       | Read      |
+| Yes          | Yes         | Yes      | Update*   |
+| No           | Yes         | Yes      | Update*   |
+| Yes          | No          | Yes      | Replace   |
+| Yes          | Yes         | No       | Delete    |
+| No           | Yes         | No       | Delete    |
+
+For Delete, we don't actually need the entire oldDocument. We simply need the _etag field. If you do not supply the documentLink seperately, we will pull both the documentLink and the needed _etag, and id fields from the oldDocument.
+
+\* Note, at this time, Update and Replace are actually full replace operations. It's my intent to upgrade it so that on update operations, if you provide only a partial list of field, it will pull the remaining fields from the oldDocument and be a true update operation. The replace operation is still triggerable by not supplying an oldDocument. 
+
 
 ## Pattern for writing stored procedures ##
 
@@ -269,7 +285,7 @@ handleLanguageSet: function(data) {}
 
 ### Tests ###
 
-I have a pattern for writing automated tests for my own stored procedures and I regularly exercise documentDBUtils in the course of running those stored procedures. I also have done extensive exploratory testing on DocumentDB's behavior using documentDBUtils... even finding some edge cases in DocumentDB's behavior. :-) However, you cannot run DoucmentDB locally and I don't have the patience to mock it out so there are currently no automated tests.
+I use the relatively simplistic documentdb-mock for writing automated tests for my own stored procedures and I regularly exercise documentDBUtils in the course of running those stored procedures. I also have done extensive exploratory testing on DocumentDB's behavior using documentDBUtils... even finding some edge cases in DocumentDB's behavior. :-) However, you cannot run DoucmentDB locally and I don't have the patience to fully mock it out so there are currently no automated tests.
 
 ### Command line support ###
 

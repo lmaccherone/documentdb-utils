@@ -173,19 +173,20 @@
     delay = function(ms, func) {
       return setTimeout(func, ms);
     };
-    processError = function(err, header, toRetryIf429, nextIfNot429) {
-      var retryAfter;
-      if (nextIfNot429 == null) {
-        nextIfNot429 = null;
+    processError = function(err, header, toRetryIf429or408, nextIfNot429or408) {
+      var retryAfter, retryAfterHeader;
+      if (nextIfNot429or408 == null) {
+        nextIfNot429or408 = null;
       }
       debug('processError()');
-      if (err.code === 429) {
-        retryAfter = Number(header['x-ms-retry-after-ms']);
+      if (err.code === 429 || err.code === 408) {
+        retryAfterHeader = (header['x-ms-retry-after-ms'] != null) || 0;
+        retryAfter = Number(retryAfterHeader);
         timeLostToThrottling += retryAfter;
         debug("Throttled. Retrying after delay of " + retryAfter + "ms");
-        return delay(retryAfter, toRetryIf429);
-      } else if (nextIfNot429 != null) {
-        return nextIfNot429();
+        return delay(retryAfter, toRetryIf429or408);
+      } else if (nextIfNot429or408 != null) {
+        return nextIfNot429or408();
       } else {
         return callCallback(err);
       }

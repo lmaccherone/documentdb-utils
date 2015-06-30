@@ -167,15 +167,16 @@ documentDBUtils = (userConfig, callback) ->
   delay = (ms, func) ->
     setTimeout(func, ms)
 
-  processError = (err, header, toRetryIf429, nextIfNot429 = null) ->
+  processError = (err, header, toRetryIf429or408, nextIfNot429or408 = null) ->
     debug('processError()')
-    if err.code is 429
-      retryAfter = Number(header['x-ms-retry-after-ms'])
+    if err.code is 429 or err.code is 408
+      retryAfterHeader = header['x-ms-retry-after-ms']? or 0
+      retryAfter = Number(retryAfterHeader)
       timeLostToThrottling += retryAfter
       debug("Throttled. Retrying after delay of #{retryAfter}ms")
-      delay(retryAfter, toRetryIf429)
-    else if nextIfNot429?
-      nextIfNot429()
+      delay(retryAfter, toRetryIf429or408)
+    else if nextIfNot429or408?
+      nextIfNot429or408()
     else
       callCallback(err)
 

@@ -4,7 +4,8 @@
   "description": "Easy-of-use and enterprise-class robustness wrapper for Azure's DocumentDB API",
   "main": "./documentDBUtils",
   "scripts": {
-    "test": "nodeunit"
+    "test": "nodeunit",
+    "prepublish": "cake compile"
   },
   "keywords": [
     "Azure",

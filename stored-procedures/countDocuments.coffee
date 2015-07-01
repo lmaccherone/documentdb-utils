@@ -11,19 +11,19 @@ count = (memo) ->
   unless memo.example?
     memo.example = null
 
-  stillQueuingOperations = true
+  memo.stillQueueing = true
 
   query = () ->
 
-    if stillQueuingOperations
+    if memo.stillQueueing
       responseOptions =
         continuation: memo.continuation
         pageSize: 1000
 
       if memo.filterQuery?
-        stillQueuingOperations = collection.queryDocuments(collection.getSelfLink(), memo.filterQuery, responseOptions, onReadDocuments)
+        memo.stillQueueing = collection.queryDocuments(collection.getSelfLink(), memo.filterQuery, responseOptions, onReadDocuments)
       else
-        stillQueuingOperations = collection.readDocuments(collection.getSelfLink(), responseOptions, onReadDocuments)
+        memo.stillQueueing = collection.readDocuments(collection.getSelfLink(), responseOptions, onReadDocuments)
 
     setBody()
 

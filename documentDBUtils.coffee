@@ -309,8 +309,11 @@ documentDBUtils = (userConfig, callback) ->
     else
       executionRoundTrips++
       config.memo = response
-      if response.continuation?
-        executeStoredProcedure()
+      if config.memo.continuation?
+        if config.memo.stillQueueing or !config.memo.stillQueueing?
+          executeStoredProcedure()
+        else
+          deleteAndUpsertStoredProcedure()
       else
         callCallback(null)
 

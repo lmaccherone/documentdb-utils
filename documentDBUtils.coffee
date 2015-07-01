@@ -304,7 +304,8 @@ documentDBUtils = (userConfig, callback) ->
     if err?
       if err.code is 403 and err.body.indexOf('is blocked for execution because it has violated its allowed resource limit several times') >= 0
         deleteAndUpsertStoredProcedure()
-      processError(err, header, executeStoredProcedure)
+      else
+        processError(err, header, executeStoredProcedure)
     else
       executionRoundTrips++
       config.memo = response

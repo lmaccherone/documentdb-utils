@@ -277,7 +277,7 @@ documentDBUtils = (userConfig, callback) ->
     if config.memo?
       unless executionStartTick?
         executionStartTick = new Date().getTime()
-      config.client.executeStoredProcedure(config.storedProcedureLink, config.memo, processResponse)
+      config.client.executeStoredProcedure(config.storedProcedureLink, config.memo, processSPResponse)
     else
       config.client.deleteStoredProcedure(config.storedProcedureLink, (err, response, header) ->
         if err?
@@ -292,29 +292,24 @@ documentDBUtils = (userConfig, callback) ->
     if config.memo?
       unless executionStartTick?
         executionStartTick = new Date().getTime()
-      config.client.executeStoredProcedure(config.storedProcedureLink, config.memo, processResponse)
+      config.client.executeStoredProcedure(config.storedProcedureLink, config.memo, processSPResponse)
     else
       callCallback(null)
 
-  processResponse = (err, response, header) ->
-    debug('processResponse()')
+  processSPResponse = (err, response, header) ->
+    debug('processSPResponse()')
     debug('err', err)
     debug('response', response)
     debug('header', header)
     if err?
+      if err.code is 403 and err.body.indexOf('is blocked for execution because it has violated its allowed resource limit several times') >= 0
+        deleteAndUpsertStoredProcedure()
       processError(err, header, executeStoredProcedure)
     else
       executionRoundTrips++
       config.memo = response
       if response.continuation?
-
-        if response.stillQueuingOperations
-          executeStoredProcedure()
-        else
-          deleteAndUpsertStoredProcedure()
-
         executeStoredProcedure()
-
       else
         callCallback(null)
 

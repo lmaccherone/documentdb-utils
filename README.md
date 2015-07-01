@@ -242,6 +242,7 @@ Here is an example of a stored procedure that counts all the documents in a coll
 
 ## Changelog ##
 
+* 0.2.2 - 2015-06-30 - Revert to blacklisting hack because the bug doesn't seem to be fixed
 * 0.2.1 - 2015-06-30 - Handle 408 error by retrying just like 429
 * 0.2.0 - 2015-06-28 - Added repository link (meant to go 0.2 in prior version)
 * 0.1.3 - 2015-06-27 - Added document operations. Removed blacklist hack.

@@ -308,45 +308,43 @@ documentDBUtils = (userConfig, callback) ->
       config.memo = response
       if response.continuation?
 
-#        # The code below is commented out because it was a hack to work around a blacklisting bug in DocumentDB that has been fixed.
-#        # If documentDBUtils continues to work as expected after its removal then we can delete the lines below and the entire deleteAndUpsertStoredProcedure function.
-#        if response.stillQueuingOperations
-#          executeStoredProcedure()
-#        else
-#          deleteAndUpsertStoredProcedure()
+        if response.stillQueuingOperations
+          executeStoredProcedure()
+        else
+          deleteAndUpsertStoredProcedure()
 
         executeStoredProcedure()
 
       else
         callCallback(null)
 
-#  deleteAndUpsertStoredProcedure = () ->
-#    # This is a total hack to overcome the fact that when you get an out of resources (false) response when you
-#    # do any operations on a collection from inside of your stored procedure. According to this:
-#    #   http://stackoverflow.com/questions/29978925/documentdb-stored-procedure-blocked
-#    # this might be a bug. If it gets fixed, we can remove this hack.
-#    debug('Got out of resources messages on this stored procedure. Deleting and upserting.')
-#    config.storedProcedureJS = config.storedProcedureJS or config.storedProcedure?.body
-#    if config.storedProcedureJS?
-#      config.client.deleteStoredProcedure(config.storedProcedureLink, (err, response, header) ->
-#        if err?
-#          processError(err, header, deleteAndUpsertStoredProcedure)
-#        else
-#          delete config.storedProcedure
-#          delete config.storedProcedureLink
-#          tryUpsertStoredProcedure()
-#      )
-#    else
-#      # !TODO: Never tested the code below which fetches the storedProcedure before retrying the deleteAndUpsert
-#      documentDBUtils.fetchStoredProcedure(config.client, config.collectionLink, config.storedProcedureID, (err, response, header) ->
-#        if err?
-#          processError(err, header, deleteAndUpsertStoredProcedure)
-#        else
-#          config.storedProcedure = response
-#          config.storedProcedureLink = response._self
-#          config.storedProcedureJS = response.body
-#          deleteAndUpsertStoredProcedure()
-#      )
+  deleteAndUpsertStoredProcedure = () ->
+    # This is a total hack to overcome the fact that when you get an out of resources (false) response when you
+    # do any operations on a collection from inside of your stored procedure. According to this:
+    #   http://stackoverflow.com/questions/29978925/documentdb-stored-procedure-blocked
+    # this might be a bug. If it gets fixed, we can remove this hack.
+    debug('Got out of resources messages on this stored procedure. Deleting and upserting.')
+    config.storedProcedureJS = config.storedProcedureJS or config.storedProcedure?.body
+    if config.storedProcedureJS?
+      config.client.deleteStoredProcedure(config.storedProcedureLink, (err, response, header) ->
+        if err?
+          processError(err, header, deleteAndUpsertStoredProcedure)
+        else
+          delete config.storedProcedure
+          delete config.storedProcedureLink
+          tryUpsertStoredProcedure()
+      )
+    else
+      # !TODO: Never tested the code below which fetches the storedProcedure before retrying the deleteAndUpsert
+      documentDBUtils.fetchStoredProcedure(config.client, config.collectionLink, config.storedProcedureID, (err, response, header) ->
+        if err?
+          processError(err, header, deleteAndUpsertStoredProcedure)
+        else
+          config.storedProcedure = response
+          config.storedProcedureLink = response._self
+          config.storedProcedureJS = response.body
+          deleteAndUpsertStoredProcedure()
+      )
 
   getCollectionLink = () ->
     debug('getCollectionLink()')

@@ -242,6 +242,7 @@ Here is an example of a stored procedure that counts all the documents in a coll
 
 ## Changelog ##
 
+* 0.2.5 - 2015-06-30 - Another bug fix
 * 0.2.4 - 2015-06-30 - Bug fix
 * 0.2.3 - 2015-06-30 - Restored the delete, upsert, and retry logic but this time only if you get a 403 error and message indicating blacklisting
 * 0.2.2 - 2015-06-30 - Revert to blacklisting hack because the bug doesn't seem to be fixed

@@ -170,7 +170,7 @@ documentDBUtils = (userConfig, callback) ->
   processError = (err, header, toRetryIf429or408, nextIfNot429or408 = null) ->
     debug('processError()')
     if err.code is 429 or err.code is 408
-      retryAfterHeader = header['x-ms-retry-after-ms']? or 0
+      retryAfterHeader = header['x-ms-retry-after-ms'] or 1
       retryAfter = Number(retryAfterHeader)
       timeLostToThrottling += retryAfter
       debug("Throttled. Retrying after delay of #{retryAfter}ms")

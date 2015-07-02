@@ -184,7 +184,8 @@ So:
 1. Only accept one parameter -- a JavaScript Object. Let's name it `memo`.
 1. Support an empty or missing `memo` on the initial call.
 1. Store any variable that represents the current running state of the stored procedure into the `memo` object.
-1. Store the `continuation` field returned by readDocuments and queryDocuments into `memo.continuation`.
+1. Store the `continuation` field returned by readDocuments and queryDocuments into `memo.continuation`. If you are doing only creates, updates, and deletes or even a set of readDocument() calls within your sproc and you want it to pause and resume for some reason, then set `continuation` manually (value doesn't matter).
+1. Store in the field called `stillQueueing` the boolean value returned by the last collection operation. (NOTE: We may be able to remove this if/when we remove the sproc delete and upsert hack.)
 1. Optionally store any internal visibility (debugging, timings, etc.) into the `memo` object.
 1. Call `getContext().getResponse().setBody(memo)` regulary, particularly right after you kick off a collection operation (readDocuments, createDocument, etc.).
 1. If `false` is returned from the last prior call to an async operation, don't issue any more async calls. Rather, wrap up the stored procedure quickly. Note, it's unclear to me that the call that returned false is guaranteed to finish, so I've resorted to writing my stored procedures so they will restart correctly whether they fail or not. That said, I have not experienced a case where the last call failed to complete.
@@ -203,19 +204,19 @@ Here is an example of a stored procedure that counts all the documents in a coll
       unless memo.continuation?
         memo.continuation = null
     
-      stillQueuingOperations = true
+      memo.stillQueueing = true
     
       query = (responseOptions) ->
     
-        if stillQueuingOperations
+        if memo.stillQueueing
           responseOptions =
             continuation: memo.continuation
             pageSize: 1000
     
           if memo.filterQuery?
-            stillQueuingOperations = collection.queryDocuments(collection.getSelfLink(), memo.filterQuery, responseOptions, onReadDocuments)
+            memo.stillQueueing = collection.queryDocuments(collection.getSelfLink(), memo.filterQuery, responseOptions, onReadDocuments)
           else
-            stillQueuingOperations = collection.readDocuments(collection.getSelfLink(), responseOptions, onReadDocuments)
+            memo.stillQueueing = collection.readDocuments(collection.getSelfLink(), responseOptions, onReadDocuments)
     
         setBody()
     
@@ -242,9 +243,16 @@ Here is an example of a stored procedure that counts all the documents in a coll
 
 ## Changelog ##
 
+* 0.3.0 - 2015-07-01 - **WARNING - Backward breaking change** Restored the hack where it
+        deletes and upserts sprocs whenever they receive a false from a collection operation. 
+        To use this functionality, you need to pattern your sprocs such that they return a 
+        `stillQueueing` field in the body. This is just the last recorded value returned from 
+        a collection operation. It's backward breaking because the key field is now 
+        `stillQueueing` whereas it was previously `stillQueueingOperations`.
 * 0.2.5 - 2015-06-30 - Another bug fix
 * 0.2.4 - 2015-06-30 - Bug fix
-* 0.2.3 - 2015-06-30 - Restored the delete, upsert, and retry logic but this time only if you get a 403 error and message indicating blacklisting
+* 0.2.3 - 2015-06-30 - Restored the delete, upsert, and retry logic but this time only if you 
+        get a 403 error and message indicating blacklisting
 * 0.2.2 - 2015-06-30 - Revert to blacklisting hack because the bug doesn't seem to be fixed
 * 0.2.1 - 2015-06-30 - Handle 408 error by retrying just like 429
 * 0.2.0 - 2015-06-28 - Added repository link (meant to go 0.2 in prior version)
@@ -313,18 +321,20 @@ However, it might also be nice to create a full CLI that would allow you to spec
 
 Copyright (c) 2015 Lawrence S. Maccherone, Jr.
 
-Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated 
-documentation files (the "Software"), to deal in the Software without restriction, including without limitation 
-the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and 
-to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software 
+and associated documentation files (the "Software"), to deal in the Software without 
+restriction, including without limitation the rights to use, copy, modify, merge, publish, 
+distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the 
+Software is furnished to do so, subject to the following conditions:
 
-The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+The above copyright notice and this permission notice shall be included in all copies or 
+substantial portions of the Software.
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED 
-TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL 
-THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF 
-CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS 
-IN THE SOFTWARE.
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING
+BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND 
+NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, 
+DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, 
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 
 

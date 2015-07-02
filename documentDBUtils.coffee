@@ -167,16 +167,16 @@ documentDBUtils = (userConfig, callback) ->
   delay = (ms, func) ->
     setTimeout(func, ms)
 
-  processError = (err, header, toRetryIf429or408, nextIfNot429or408 = null) ->
+  processError = (err, header, toRetryIf429, nextIfNot429 = null) ->
     debug('processError()')
-    if err.code is 429 or err.code is 408
+    if err.code is 429
       retryAfterHeader = header['x-ms-retry-after-ms'] or 1
       retryAfter = Number(retryAfterHeader)
       timeLostToThrottling += retryAfter
       debug("Throttled. Retrying after delay of #{retryAfter}ms")
-      delay(retryAfter, toRetryIf429or408)
-    else if nextIfNot429or408?
-      nextIfNot429or408()
+      delay(retryAfter, toRetryIf429)
+    else if nextIfNot429?
+      nextIfNot429()
     else
       callCallback(err)
 
@@ -302,18 +302,14 @@ documentDBUtils = (userConfig, callback) ->
     debug('response', response)
     debug('header', header)
     if err?
-      if err.code is 403 and err.body.indexOf('is blocked for execution because it has violated its allowed resource limit several times') >= 0
-        deleteAndUpsertStoredProcedure()
-      else
-        processError(err, header, executeStoredProcedure)
+      processError(err, header, executeStoredProcedure)
     else
       executionRoundTrips++
       config.memo = response
-      if config.memo.continuation?
-        if config.memo.stillQueueing or !config.memo.stillQueueing?
-          executeStoredProcedure()
-        else
-          deleteAndUpsertStoredProcedure()
+      if config.memo.stillQueueing is false  # This is different from !memo.stillQueueing because memo.stillQueueing may be missing
+        deleteAndUpsertStoredProcedure()
+      else if config.memo.continuation?
+        executeStoredProcedure()
       else
         callCallback(null)
 

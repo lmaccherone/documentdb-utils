@@ -37,6 +37,6 @@
     "nodeunit": "^0.9.1"
   },
   "dependencies": {
-    "documentdb": "^1.0.0"
+    "documentdb": "^1.1.0"
   }
 }

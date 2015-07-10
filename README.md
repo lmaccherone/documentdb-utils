@@ -243,6 +243,7 @@ Here is an example of a stored procedure that counts all the documents in a coll
 
 ## Changelog ##
 
+* 0.3.1 - 2015-07-09 - Upgraded to latest version of documentdb API
 * 0.3.0 - 2015-07-01 - **WARNING - Backward breaking change** Restored the hack where it
         deletes and upserts sprocs whenever they receive a false from a collection operation. 
         To use this functionality, you need to pattern your sprocs such that they return a 

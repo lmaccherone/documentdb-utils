@@ -321,7 +321,11 @@ documentDBUtils = (userConfig, callback) ->
     if header?['x-ms-request-charge']?
       totalRequestCharges += Number(header['x-ms-request-charge'])
     if err?
-      processError(err, header, executeStoredProcedure)
+      if err.code is 403 and JSON.parse(err.body).message.toString().indexOf('violated its allowed resource limit several times') > 0
+        debug('Stored procedure was blacklisted. Deleting and recreating.')
+        deleteAndUpsertStoredProcedure()
+      else
+        processError(err, header, executeStoredProcedure)
     else
       executionRoundTrips++
       config.memo = response

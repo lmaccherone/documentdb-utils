@@ -1,6 +1,6 @@
 {
   "name": "documentdb-utils",
-  "version": "0.3.2",
+  "version": "0.3.3",
   "description": "Easy-of-use and enterprise-class robustness wrapper for Azure's DocumentDB API",
   "main": "./documentDBUtils",
   "scripts": {

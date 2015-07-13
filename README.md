@@ -242,7 +242,8 @@ Here is an example of a stored procedure that counts all the documents in a coll
 
 ## Changelog ##
 
-* 0.3.1 - 2015-07-12 - Returns total RUs in stats
+* 0.3.3 - 2015-07-12 - Will delete and recreate sprocs that have been blacklisted
+* 0.3.2 - 2015-07-12 - Returns total RUs in stats
 * 0.3.1 - 2015-07-09 - Upgraded to latest version of documentdb API
 * 0.3.0 - 2015-07-01 - **WARNING - Backward breaking change** Restored the hack where it
         deletes and upserts sprocs whenever they receive a false from a collection operation. 

@@ -188,8 +188,7 @@ So:
 1. Store in the field called `stillQueueing` the boolean value returned by the last collection operation. (NOTE: We may be able to remove this if/when we remove the sproc delete and upsert hack.)
 1. Optionally store any internal visibility (debugging, timings, etc.) into the `memo` object.
 1. Call `getContext().getResponse().setBody(memo)` regulary, particularly right after you kick off a collection operation (readDocuments, createDocument, etc.).
-1. If `false` is returned from the last prior call to an async operation, don't issue any more async calls. Rather, wrap up the stored procedure quickly. Note, it's unclear to me that the call that returned false is guaranteed to finish, so I've resorted to writing my stored procedures so they will restart correctly whether they fail or not. That said, I have not experienced a case where the last call failed to complete.
-1. Optionally, wrap up early when the stored procedure exceeds other constraints. My super-duper count example below implements both maxRowCount and maxExecutionTime constraints.
+1. If `false` is returned from the most recent call to a collection operation, don't issue any more async calls. Rather, wrap up the stored procedure quickly.
 
 Here is an example of a stored procedure that counts all the documents in a collection with an option to filter based upon provided filterQuery field in the initial memo. The source for this is included in this repository.
 
@@ -243,6 +242,7 @@ Here is an example of a stored procedure that counts all the documents in a coll
 
 ## Changelog ##
 
+* 0.3.1 - 2015-07-12 - Returns total RUs in stats
 * 0.3.1 - 2015-07-09 - Upgraded to latest version of documentdb API
 * 0.3.0 - 2015-07-01 - **WARNING - Backward breaking change** Restored the hack where it
         deletes and upserts sprocs whenever they receive a false from a collection operation. 

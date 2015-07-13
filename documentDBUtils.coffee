@@ -70,6 +70,7 @@ documentDBUtils = (userConfig, callback) ->
   startTick = new Date().getTime()
   executionStartTick = null
   timeLostToThrottling = 0
+  totalRequestCharges = 0
 
   debug = (message, content) ->
     if config.debug
@@ -93,6 +94,8 @@ documentDBUtils = (userConfig, callback) ->
       debug("Time lost to throttling: #{stats.timeLostToThrottling}ms")
     stats.totalTime = endTick - startTick
     debug("Total time: #{stats.totalTime}ms")
+    stats.totalRequestCharges = totalRequestCharges
+    debug("Total request charges: #{stats.totalRequestCharges} RUs")
     config.stats = stats
     callback(err, config)
 
@@ -183,6 +186,8 @@ documentDBUtils = (userConfig, callback) ->
   createDocument = () ->
     debug('createDocument()')
     config.client.createDocument(config.collectionLink, config.document, (err, response, header) ->
+      if header?['x-ms-request-charge']?
+        totalRequestCharges += Number(header['x-ms-request-charge'])
       if err?
         processError(err, header, createDocument)
       else
@@ -194,6 +199,8 @@ documentDBUtils = (userConfig, callback) ->
     debug('readDocument()')
     debug('documentLink', config.documentLink)
     config.client.readDocument(config.documentLink, (err, response, header) ->
+      if header?['x-ms-request-charge']?
+        totalRequestCharges += Number(header['x-ms-request-charge'])
       if err?
         processError(err, header, readDocument)
       else
@@ -221,6 +228,8 @@ documentDBUtils = (userConfig, callback) ->
       replaceOptions = {etag, "if-match": etag}  # There is no indication in the docs that the DocumentDB node.js client supports etag/if-match optimistic concurrency but I'm including just in case
     console.log('config.document', config.document)
     config.client.replaceDocument(config.documentLink, config.document, replaceOptions, (err, response, header) ->
+      if header?['x-ms-request-charge']?
+        totalRequestCharges += Number(header['x-ms-request-charge'])
       if err?
         processError(err, header, replaceDocument)
       else
@@ -237,6 +246,8 @@ documentDBUtils = (userConfig, callback) ->
       etag = config.oldDocument._etag
       deleteOptions = {etag, "if-match": etag}  # There is no indication in the docs that the DocumentDB node.js client supports etag/if-match optimistic concurrency but I'm including just in case
     config.client.deleteDocument(config.documentLink, deleteOptions, (err, response, header) ->
+      if header?['x-ms-request-charge']?
+        totalRequestCharges += Number(header['x-ms-request-charge'])
       if err?
         processError(err, header, readDocument)
       else
@@ -248,6 +259,8 @@ documentDBUtils = (userConfig, callback) ->
     debug('getStoredProcedureFromID()')
     debug('collectionLink', config.collectionLink)
     documentDBUtils.fetchStoredProcedure(config.client, config.collectionLink, config.storedProcedureID, (err, response, header) ->
+      if header?['x-ms-request-charge']?
+        totalRequestCharges += Number(header['x-ms-request-charge'])
       if err?
         processError(err, header, getStoredProcedureFromID, tryUpsertStoredProcedure)
       else
@@ -264,6 +277,8 @@ documentDBUtils = (userConfig, callback) ->
     unless config.storedProcedureJS?
       callCallback('Missing storedProcedureJS')
     documentDBUtils.upsertStoredProcedure(config.client, config.collectionLink, config.storedProcedureID, config.storedProcedureJS, (err, response, header) ->
+      if header?['x-ms-request-charge']?
+        totalRequestCharges += Number(header['x-ms-request-charge'])
       if err?
         processError(err, header, tryUpsertStoredProcedure)
       else
@@ -280,6 +295,8 @@ documentDBUtils = (userConfig, callback) ->
       config.client.executeStoredProcedure(config.storedProcedureLink, config.memo, processSPResponse)
     else
       config.client.deleteStoredProcedure(config.storedProcedureLink, (err, response, header) ->
+        if header?['x-ms-request-charge']?
+          totalRequestCharges += Number(header['x-ms-request-charge'])
         if err?
           processError(err, header, deleteOrExecuteStoredProcedure)
         else
@@ -301,6 +318,8 @@ documentDBUtils = (userConfig, callback) ->
     debug('err', err)
     debug('response', response)
     debug('header', header)
+    if header?['x-ms-request-charge']?
+      totalRequestCharges += Number(header['x-ms-request-charge'])
     if err?
       processError(err, header, executeStoredProcedure)
     else
@@ -322,6 +341,8 @@ documentDBUtils = (userConfig, callback) ->
     config.storedProcedureJS = config.storedProcedureJS or config.storedProcedure?.body
     if config.storedProcedureJS?
       config.client.deleteStoredProcedure(config.storedProcedureLink, (err, response, header) ->
+        if header?['x-ms-request-charge']?
+          totalRequestCharges += Number(header['x-ms-request-charge'])
         if err?
           processError(err, header, deleteAndUpsertStoredProcedure)
         else
@@ -332,6 +353,8 @@ documentDBUtils = (userConfig, callback) ->
     else
       # !TODO: Never tested the code below which fetches the storedProcedure before retrying the deleteAndUpsert
       documentDBUtils.fetchStoredProcedure(config.client, config.collectionLink, config.storedProcedureID, (err, response, header) ->
+        if header?['x-ms-request-charge']?
+          totalRequestCharges += Number(header['x-ms-request-charge'])
         if err?
           processError(err, header, deleteAndUpsertStoredProcedure)
         else
@@ -354,6 +377,8 @@ documentDBUtils = (userConfig, callback) ->
       debug("collectionID", config.collectionID)
       if config.databaseLink?
         documentDBUtils.getOrCreateCollection(config.client, config.databaseLink, config.collectionID, (err, response, header) ->
+          if header?['x-ms-request-charge']?
+            totalRequestCharges += Number(header['x-ms-request-charge'])
           if err?
             processError(err, header, getCollectionLink)
           else
@@ -377,6 +402,8 @@ documentDBUtils = (userConfig, callback) ->
     else if config.databaseID?
       debug('calling')
       documentDBUtils.getOrCreateDatabase(config.client, config.databaseID, (err, response, header) ->
+        if header?['x-ms-request-charge']?
+          totalRequestCharges += Number(header['x-ms-request-charge'])
         if err?
           processError(err, header, getDatabaseLink)
         else

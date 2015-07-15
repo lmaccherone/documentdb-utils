@@ -242,6 +242,7 @@ Here is an example of a stored procedure that counts all the documents in a coll
 
 ## Changelog ##
 
+* 0.3.4 - 2015-07-14 - Finally got rid of the delete/recreate hack when just terminated for out of time. Still deletes/recreates if get 403 blacklist message 
 * 0.3.3 - 2015-07-12 - Will delete and recreate sprocs that have been blacklisted
 * 0.3.2 - 2015-07-12 - Returns total RUs in stats
 * 0.3.1 - 2015-07-09 - Upgraded to latest version of documentdb API

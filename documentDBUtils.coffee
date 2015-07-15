@@ -329,9 +329,11 @@ documentDBUtils = (userConfig, callback) ->
     else
       executionRoundTrips++
       config.memo = response
-      if config.memo.stillQueueing is false  # This is different from !memo.stillQueueing because memo.stillQueueing may be missing
-        deleteAndUpsertStoredProcedure()
-      else if config.memo.continuation?
+#      if config.memo.stillQueueing is false  # This is different from !memo.stillQueueing because memo.stillQueueing may be missing
+#        deleteAndUpsertStoredProcedure()
+#      else if config.memo.continuation?
+#        executeStoredProcedure()
+      if config.memo.continuation?
         executeStoredProcedure()
       else
         callCallback(null)

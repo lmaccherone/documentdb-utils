@@ -9,7 +9,7 @@ DocumentClient = require("documentdb").DocumentClient
 
 utils = {}
 utils.clone = (obj) ->
-  if not obj? or typeof obj isnt 'object'
+  if not obj? or typeof(obj) isnt 'object'
     return obj
 
   if obj instanceof Date
@@ -36,41 +36,39 @@ utils.clone = (obj) ->
 
 ###
 documentDBUtils = (userConfig, callback) ->
-  options =
-    client: "If you've already instantiated the DocumentClient pass it in with this."
-    auth: 'Allow for full configuration of auth per DocumentClient API.'
-    masterKey: 'Will pull from DOCUMENT_DB_KEY environment variable if not specified.'
-    urlConnection: 'Will pull from DOCUMENT_DB_URL environment variable if not specified.'
 
-    offerType: 'offerType to use when creating a new collection'
-
-    database: "If you've already fetched it, use this."
-    databaseLink: "Alternatively, use the self link."
-    databaseID: 'Readable ID.'
-
-    collection: "If you've already fetched it, use this."
-    collectionLink: "Alternatively, use the self link."
-    collectionID: 'Readable ID.'
-
-    storedProcedure: "If you've already fetched it, use this."
-    storedProcedureLink: "Alternatively, use the self link."
-    storedProcedureID: 'Readable ID.'
-    storedProcedureJS: 'The JavaScript or its toString()'
-    memo: 'Object containing parameters and initial memo values for stored procedure. Must send at least {} to trigger execution.'  # Note, in CS {}? is true, null? and undefined? are false
-
-    debug: 'Default: false. Set to true if you want progress messages.'
+#  options =
+#    client: "If you've already instantiated the DocumentClient pass it in with this."
+#    auth: 'Allow for full configuration of auth per DocumentClient API.'
+#    masterKey: 'Will pull from DOCUMENT_DB_KEY environment variable if not specified.'
+#    urlConnection: 'Will pull from DOCUMENT_DB_URL environment variable if not specified.'
+#
+#    offerType: 'offerType to use when creating a new collection'
+#
+#    database: "If you've already fetched it, use this."
+#    databaseLink: "Alternatively, use the self link."
+#    databaseID: 'Readable ID.'
+#
+#    collection: "If you've already fetched it, use this."
+#    collectionLink: "Alternatively, use the self link."
+#    collectionID: 'Readable ID.'
+#
+#    storedProcedure: "If you've already fetched it, use this."
+#    storedProcedureLink: "Alternatively, use the self link."
+#    storedProcedureID: 'Readable ID.'
+#    storedProcedureJS: 'The JavaScript or its toString()'
+#    memo: 'Object containing parameters and initial memo values for stored procedure. Must send at least {} to trigger execution.'  # Note, in CS {}? is true, null? and undefined? are false
+#
+#    debug: 'Default: false. Set to true if you want progress messages.'
 
     # !TODO: Add UDFs and Triggers
     # !TODO: Add create, update, replace, delete documents. How to tell the difference between update and replace
 
-  config = utils.clone(userConfig)
-  config.debug = config.debug or false
+#  config = utils.clone(userConfig)  # TODO: Need to figure out why this was failing for Temporalize. It's risky to not clone.
+#  config = userConfig
+  config = JSON.parse(JSON.stringify(userConfig))
 
-  executionRoundTrips = 0
-  startTick = new Date().getTime()
-  executionStartTick = null
-  timeLostToThrottling = 0
-  totalRequestCharges = 0
+  config.debug = config.debug or false
 
   debug = (message, content) ->
     if config.debug
@@ -78,6 +76,14 @@ documentDBUtils = (userConfig, callback) ->
       if content?
         console.dir(content)
         console.log()
+
+  debug('Starting documentDBUtils')
+
+  executionRoundTrips = 0
+  startTick = new Date().getTime()
+  executionStartTick = null
+  timeLostToThrottling = 0
+  totalRequestCharges = 0
 
   callCallback = (err) ->
     endTick = new Date().getTime()
@@ -226,7 +232,6 @@ documentDBUtils = (userConfig, callback) ->
     if config.oldDocument?._etag?
       etag = config.oldDocument._etag
       replaceOptions = {etag, "if-match": etag}  # There is no indication in the docs that the DocumentDB node.js client supports etag/if-match optimistic concurrency but I'm including just in case
-    console.log('config.document', config.document)
     config.client.replaceDocument(config.documentLink, config.document, replaceOptions, (err, response, header) ->
       if header?['x-ms-request-charge']?
         totalRequestCharges += Number(header['x-ms-request-charge'])

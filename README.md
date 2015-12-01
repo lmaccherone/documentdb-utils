@@ -2,7 +2,7 @@
 
 Copyright (c) 2015, Lawrence S. Maccherone, Jr.
 
-_Easy-of-use and enterprise-class robustness wrapper for Azure's DocumentDB API_
+_Ease-of-use and enterprise-class robustness wrapper for Azure's DocumentDB API_
 
 The node.js client for Microsoft Azure DocumentDB is a thin wrapper around the REST API. That's fine but it means that you need to deal with all the complications of throttling retries, the restoring and continuation of stored procedures that have reached their resource limits, etc. Also, every operation requires that you have the link to the database, collection, stored procedure, etc. You currently have to fetch the links yourself by first querying for them using the human readable IDs further complicating your already mind-boggling-hard-to-write async code.
 

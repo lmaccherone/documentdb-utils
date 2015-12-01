@@ -1,7 +1,7 @@
 {
   "name": "documentdb-utils",
   "version": "0.3.4",
-  "description": "Easy-of-use and enterprise-class robustness wrapper for Azure's DocumentDB API",
+  "description": "Ease-of-use and enterprise-class robustness wrapper for Azure's DocumentDB API",
   "main": "./documentDBUtils",
   "scripts": {
     "test": "nodeunit",
@@ -37,6 +37,6 @@
     "nodeunit": "^0.9.1"
   },
   "dependencies": {
-    "documentdb": "^1.1.0"
+    "documentdb": "^1.2.1"
   }
 }

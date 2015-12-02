@@ -1,4 +1,4 @@
-count = (memo) ->
+module.exports = (memo) ->
 
   collection = getContext().getCollection()
 
@@ -46,5 +46,3 @@ count = (memo) ->
 
   query()
   return memo
-
-exports.count = count

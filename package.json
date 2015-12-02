@@ -2,7 +2,7 @@
   "name": "documentdb-utils",
   "version": "0.3.4",
   "description": "Ease-of-use and enterprise-class robustness wrapper for Azure's DocumentDB API",
-  "main": "./documentDBUtils",
+  "main": "./index",
   "scripts": {
     "test": "nodeunit",
     "prepublish": "cake compile"
@@ -33,10 +33,11 @@
   },
   "devDependencies": {
     "coffee-script": "^1.9.2",
-    "jsdoc": "^3.2.0",
-    "nodeunit": "^0.9.1"
+    "nodeunit": "^0.9.1",
+    "documentdb-mock": "^0.2.0",
+    "sql-from-mongo": "^0.2.0"
   },
   "dependencies": {
-    "documentdb": "^1.2.1"
+    "documentdb": "^1.4.0"
   }
 }

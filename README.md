@@ -4,7 +4,11 @@ Copyright (c) 2015, Lawrence S. Maccherone, Jr.
 
 _Ease-of-use and enterprise-class robustness wrapper for Azure's DocumentDB API_
 
-The node.js client for Microsoft Azure DocumentDB is a thin wrapper around the REST API. That's fine but it means that you need to deal with all the complications of throttling retries, the restoring and continuation of stored procedures that have reached their resource limits, etc. Also, every operation requires that you have the link to the database, collection, stored procedure, etc. You currently have to fetch the links yourself by first querying for them using the human readable IDs further complicating your already mind-boggling-hard-to-write async code.
+The node.js client for Microsoft Azure DocumentDB is a thin wrapper around the REST API. That's fine but it means that 
+you need to deal with all the complications of throttling retries, the restoring and continuation of stored procedures 
+that have reached their resource limits, etc. Also, every operation requires that you have the link to the database, 
+collection, stored procedure, etc. You currently have to fetch the links yourself by first querying for them using the 
+human readable IDs further complicating your already mind-boggling-hard-to-write async code.
 
 In summary, documentDBUtils takes care of all of this for you and makes it much easier to use Microsoft Azure DocumentDB from node.js.
 
@@ -242,16 +246,29 @@ Here is an example of a stored procedure that counts all the documents in a coll
 
 ## Changelog ##
 
+* 0.4.0 - 2015-12-02 - **WARNING - Major backward breaking changes** 
+  Since documentdb-utils was introduced, DocumentDB has added id-based links, upserts, and maxItemCount = -1. The lack of these
+  features were 3 of the 4 primary motivations for the creation of documentdb-utils. The only remaining big motivator is
+  authomatic retries upon 429 errors. However, I now believe that the best way to provide that is by wrapping the appropriate methods
+  of the Azure-provided DocumentDB node.js API. This new approach makes documentdb-utils much easier to
+  utilize since it has the same API as the Azure-provided one. You can now add documentdb-utils in one place
+  and not modify the rest of your code. Previously, documentdb-utils had a monolithic single function API that looked
+  very different from the Azure-provided one. Also, it now supports every method of the Azure-provided API, whereas previously,
+  documentdb-utils only supported stored procedures and single-document operations. Nearly every line of code in this package has been rewritten to accomplish 
+  this transformation. Further, I've built a number of other useful utilities including enabling 
+  code reuse for stored procedures by allowing you to `require()` other bits of code or even appropriate npm modules 
+  directly in your sprocs as well as automatic loading of all stored procedures in a given directory. This additional utility was
+  implemented as part of other projects but it's generally useful so it's now been moved here. 
 * 0.3.4 - 2015-07-14 - Finally got rid of the delete/recreate hack when just terminated for out of time. Still deletes/recreates if get 403 blacklist message 
 * 0.3.3 - 2015-07-12 - Will delete and recreate sprocs that have been blacklisted
 * 0.3.2 - 2015-07-12 - Returns total RUs in stats
 * 0.3.1 - 2015-07-09 - Upgraded to latest version of documentdb API
 * 0.3.0 - 2015-07-01 - **WARNING - Backward breaking change** Restored the hack where it
-        deletes and upserts sprocs whenever they receive a false from a collection operation. 
-        To use this functionality, you need to pattern your sprocs such that they return a 
-        `stillQueueing` field in the body. This is just the last recorded value returned from 
-        a collection operation. It's backward breaking because the key field is now 
-        `stillQueueing` whereas it was previously `stillQueueingOperations`.
+  deletes and upserts sprocs whenever they receive a false from a collection operation. 
+  To use this functionality, you need to pattern your sprocs such that they return a 
+  `stillQueueing` field in the body. This is just the last recorded value returned from 
+  a collection operation. It's backward breaking because the key field is now 
+  `stillQueueing` whereas it was previously `stillQueueingOperations`.
 * 0.2.5 - 2015-06-30 - Another bug fix
 * 0.2.4 - 2015-06-30 - Bug fix
 * 0.2.3 - 2015-06-30 - Restored the delete, upsert, and retry logic but this time only if you 

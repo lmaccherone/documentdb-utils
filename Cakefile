@@ -31,6 +31,20 @@ task('compile', 'Compile CoffeeScript source files to JavaScript', () ->
   )
 )
 
+task('clean', 'Deletes .js and .map files', () ->
+  console.error('this is not working correctly!!!')
+  folders = ['.', 'sprocs', 'src']
+  for folder in folders
+    pathToClean = path.join(__dirname, folder)
+    console.log(pathToClean)
+    fs.readdirSync(pathToClean, (err, contents) ->
+      console.log(contents)
+      for file in contents when (endsWith(file, '.js') or endsWith(file, '.map'))
+        console.log(file)
+        fs.unlinkSync(path.join(pathToClean, file))
+    )
+)
+
 task('test', 'UNIMPLEMENTED - Run the CoffeeScript test suite with nodeunit', () ->
   {reporters} = require('nodeunit')
   process.chdir(__dirname)

@@ -1,3 +1,5 @@
+# TODO: Write tests for createSpecificDocuments sproc
+
 module.exports = (memo) ->
 
   unless memo?.documents?

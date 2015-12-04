@@ -1,10 +1,10 @@
 path = require('path')
 fs = require('fs')
 expandSproc = require(path.join(__dirname, 'expandSproc'))
+getLinkArray = require(path.join(__dirname, 'getLinkArray'))
 async = require('async')
 
 loadSprocToOneCollection = (spec, callback) ->  # spec: {collectionLink, sproc, client}
-  console.log("Loaded sproc: #{spec.sproc.id} to collection: #{spec.collectionLink}")
   spec.client.upsertStoredProcedure(spec.collectionLink, spec.sproc, callback)
 
 loadSprocFromFile = (spec, callback) ->  # spec: {fullFilePath, client, collectionLinks}
@@ -15,11 +15,14 @@ loadSprocFromFile = (spec, callback) ->  # spec: {fullFilePath, client, collecti
 
 module.exports = (spec, callback) ->
   {sprocDirectory, client, collectionLinks} = spec
-  sprocLinks = {}
   sprocFiles = fs.readdirSync(sprocDirectory)
+  sprocNames = (path.basename(sprocFile, '.coffee') for sprocFile in sprocFiles)
+  sprocLinks = getLinkArray(collectionLinks, sprocNames)
   specs = []
   for sprocFile in sprocFiles
     fullFilePath = path.join(sprocDirectory, sprocFile)
     specs.push({fullFilePath, client, collectionLinks})
-  async.each(specs, loadSprocFromFile, callback)
+  async.each(specs, loadSprocFromFile, (err) ->
+    callback(err, sprocLinks)
+  )
 

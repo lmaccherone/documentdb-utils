@@ -1,7 +1,7 @@
 module.exports = (memo) ->
 
   unless memo?.remaining?
-    throw new Error('generateData must be called with an object containing a `remaining` field.')
+    throw new Error('createVariedDocuments must be called with an object containing a `remaining` field.')
   unless memo.totalCount?
     memo.totalCount = 0
   memo.countForThisRun = 0
@@ -31,6 +31,7 @@ module.exports = (memo) ->
   collection = getContext().getCollection()
   collectionLink = collection.getSelfLink()
   memo.stillQueueing = true
+  memo.continuation = "Value does not matter"
 
   createDocument = () ->
     if memo.remaining > 0 and memo.stillQueueing
@@ -54,7 +55,11 @@ module.exports = (memo) ->
           getContext().getResponse().setBody(memo)
       )
     else
-      memo.continuation = null
+      if memo.stillQueueing
+        memo.continuation = null
+      else
+        memo.continuation = 'Value does not matter'
       getContext().getResponse().setBody(memo)
+      return
 
   createDocument()

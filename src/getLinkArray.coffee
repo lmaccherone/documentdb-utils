@@ -1,6 +1,5 @@
 path = require('path')
 _ = require('lodash')
-getLink = require(path.join(__dirname, '..', 'src', 'getLink'))
 
 DEFAULT_PREFIXES = ['dbs', 'colls', 'sprocs']
 
@@ -47,8 +46,11 @@ module.exports = (parameters...) ->
       prefixArray.push(keys[0])
       valuesArray.push(_.values(parameter)[0])
     else
+      if _.isString(parameter)
+        parameter = [parameter]
       if defaultStillValid
         firstValue = parameter[0] or parameter
+        firstValue = firstValue.toString()
         if firstValue.indexOf('/') < 0
           prefixArray.push(defaultPrefixes.shift())
         else
@@ -58,10 +60,12 @@ module.exports = (parameters...) ->
           prefixArray.push(null)
         if _.isString(parameter)
           valuesArray.push([parameter])
+        else if _.isNumber(parameter)
+          valuesArray.push([parameter.toString()])
         else if _.isArray(parameter)
           valuesArray.push(parameter)
         else
-          throw new Error("Parameters for getLinks() must be of type string, array, or object")
+          throw new Error("Parameters for getLinkArray() must be of type string, number, array, or object")
       else
         throw new Error('Cannot use default prefixes after non-default prefixes have been used')
 

@@ -6,9 +6,19 @@ exports.linkTest =
 
   basic: (test) ->
     l = getLink('I', 'A', 1)
-    test.equal(l, "dbs/I/colls/A/docs/1")
-    l2 = getLink({dbs: 1, elephants: 'e'})
-    test.equal(l2, "dbs/1/elephants/e")
+    test.equal(l, "dbs/I/colls/A/sprocs/1")
+
+    l2 = getLink(1, {users: 'myUser'})
+    test.equal(l2, "dbs/1/users/myUser")
+
+    l3 = sprocLink = getLink('dev-test-database', 1, 'createVariedDocuments')
+    test.equal(l3, "dbs/dev-test-database/colls/1/sprocs/createVariedDocuments")
+
+    collectionLink = getLink('dev-test-database', 1)
+    test.equal(collectionLink, 'dbs/dev-test-database/colls/1')
+
+    sprocLink = getLink(collectionLink, 'createVariedDocuments')
+    test.equal(sprocLink, 'dbs/dev-test-database/colls/1/sprocs/createVariedDocuments')
 
     test.done()
 
@@ -82,7 +92,9 @@ exports.linkTest =
     ]
     test.deepEqual(links, expected)
 
-    # Let's say you already have an expanded list of links and you want to tack something on. This works.
+    # Let's say you already have an expanded list of links and you want to tack something on. This works including using defaults.
+    # BTW, this is the most useful mode for getLinkArray. I very commonly have a list of collections and I want to call the same
+    # stored procedure in each
     collectionLinks = [
       'dbs/db1/colls/col1',
       'dbs/db1/colls/col2',
@@ -95,5 +107,12 @@ exports.linkTest =
       'dbs/db1/colls/col3/sprocs/mySproc'
     ]
     test.deepEqual(sprocLinks, expected)
+
+    links = getLinkArray(['dev-test-database'], [1, 2])
+    expected = [
+      'dbs/dev-test-database/colls/1',
+      'dbs/dev-test-database/colls/2'
+    ]
+    test.deepEqual(links, expected)
 
     test.done()

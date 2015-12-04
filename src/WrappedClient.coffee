@@ -37,7 +37,6 @@ wrapCallbackMethod = (that, _method, defaultRetries) ->
         if err?
           if err.code in [429, 449] and retriesLeft > 0
             retryAfter = headers['x-ms-retry-after-ms'] or 1
-            console.log('Got 429')
             retries++
             delay(retryAfter, () ->
               innerF(retriesLeft - 1, parameters...)

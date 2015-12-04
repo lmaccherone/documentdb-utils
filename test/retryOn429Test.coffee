@@ -50,26 +50,26 @@ exports.retryOn429Test =
         )
       )
     )
-#
-#  callbackMethodTest: (test) ->
-#    wrappedClient = new WrappedClient(client)
-#    collectionLink = getLink('dev-test-database', 1)
-#    sprocLink = getLink(collectionLink, 'createVariedDocuments')
-#    async.forever(
-#      (next) ->
-#        client.executeStoredProcedure(sprocLink, {remaining: 1000}, next)
-#      (err) ->
-#        unless err?.code is 429
-#          console.dir(err)
-#          throw new Error("Got something other than a 429 error when trying to create load")
-#        wrappedClient.createDocument(collectionLink, {a:1}, (err, response, headers) ->
-#          if err?
-#            console.dir(err)
-#            throw new Error("Got error when trying to create document via WrappedClient")
-#          test.equal(response.a, 1)
-#          test.done()
-#        )
-#    )
+
+  callbackMethodTest: (test) ->
+    wrappedClient = new WrappedClient(client)
+    collectionLink = getLink('dev-test-database', 1)
+    sprocLink = getLink(collectionLink, 'createVariedDocuments')
+    async.forever(
+      (next) ->
+        client.executeStoredProcedure(sprocLink, {remaining: 1000}, next)
+      (err) ->
+        unless err?.code is 429
+          console.dir(err)
+          throw new Error("Got something other than a 429 error when trying to create load")
+        wrappedClient.createDocument(collectionLink, {a:1}, (err, response, headers) ->
+          if err?
+            console.dir(err)
+            throw new Error("Got error when trying to create document via WrappedClient")
+          test.equal(response.a, 1)
+          test.done()
+        )
+    )
 
   queryIteratorTest: (test) ->
     wrappedClient = new WrappedClient(client)
@@ -95,7 +95,12 @@ exports.retryOn429Test =
           if err?
             console.dir(err)
             throw new Error("Unexepected error during queryIteratorTest")
-          console.log(retries)
+          if retries <= 0
+            console.log("""
+              It's very hard to deterministically recreate 429 erros. This test run did not produce any retries,
+              so this test will fail. You should rerun this queryIteratorTest until it passes (usually within 2-3 tries).
+            """)
+          test.ok(retries > 0)
           test.done()
         )
     )

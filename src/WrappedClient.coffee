@@ -51,6 +51,13 @@ wrapSimpleMethod = (that, _method) ->
     return _method.call(that, parameters...)
   return f
 
+wrapToCreateAsyncJSIterator = (that, _method) ->
+  f = (item, callback) ->
+    return _method.call(that, item..., (err, response, headers, other) ->
+      callback(err, {response, headers, other})
+    )
+  return f
+
 wrapCallbackMethod = (that, _method, defaultRetries) ->
   retries = 0
   f = (parameters...) ->
@@ -106,23 +113,30 @@ module.exports = class WrappedClient
     for methodName, _method of @_client
       if typeof _method isnt 'function'
         continue
-      else if methodName is 'executeStoredProcedure'
+
+      methodSpec = _method.toString().split('\n')[0]
+      hasArrayVersion = _.startsWith(methodName, 'query') or
+                        _.startsWith(methodName, 'read') and _.endsWith(methodName, 's')
+      firstParameterIsCollectionLink = methodSpec.indexOf('(collectionLink') >= 0
+      lastParameterIsCallback = methodSpec.indexOf('callback)') >= 0
+      if methodName is 'executeStoredProcedure'
         this[methodName] = wrapExecuteStoredProcedure(@_client, _method, @defaultRetries)
-      else if _.startsWith(methodName, 'create') or  # These all have a callback parameter
-              _.startsWith(methodName, 'delete') or
-              _.startsWith(methodName, 'execute') or
-              _.startsWith(methodName, 'replace') or
-              _.startsWith(methodName, 'update') or
-              _.startsWith(methodName, 'upsert') or
-              methodName is 'getDatabaseAccount' or
-              methodName is 'queryFeed' or
-              _.startsWith(methodName, 'read') and not _.endsWith(methodName, 's') or
-              methodName in ['get', 'post', 'put', 'head', 'delete']
+      else if lastParameterIsCallback
         this[methodName] = wrapCallbackMethod(@_client, _method, @defaultRetries)
-      else if _.startsWith(methodName, 'query') or  # These all return a QueryIterator
-              _.startsWith(methodName, 'read') and _.endsWith(methodName, 's')
+      else if hasArrayVersion
         this[methodName] = wrapQueryIteratorMethod(@_client, _method, @defaultRetries)
         this[methodName + 'Array'] = wrapQueryIteratorMethodForArray(@_client, _method, @defaultRetries)
-      else  # When I checked, these were all functions that had neither callbacks or returned QueryIterator. They appear to be utility functions.
+
+      else  # When I checked, these were all functions that had neither callbacks nor returned QueryIterator. They appear to be utility functions.
         # do nothing
+
+      if firstParameterIsCollectionLink
+        if hasArrayVersion
+          methodNameToWrap = methodName + 'Array'
+        else
+          methodNameToWrap = methodName
+        console.log(methodNameToWrap)
+        this[methodNameToWrap + 'AsyncJSIterator'] = wrapToCreateAsyncJSIterator(this, this[methodNameToWrap])
+
+
 

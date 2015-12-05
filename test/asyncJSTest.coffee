@@ -6,10 +6,10 @@ async = require('async')
 
 client = null
 wrappedClient = null
-docsRemaining = 3999
+docsRemaining = 10
 docsRetrieved = 0
 
-exports.wrappedToArrayTest =
+exports.asyncJSTest =
 
   setUp: (callback) ->
     urlConnection = process.env.DOCUMENT_DB_URL
@@ -40,41 +40,44 @@ exports.wrappedToArrayTest =
       )
     )
 
-#  junkTest: (test) ->
-#    test.done()
-
-  getAllTest: (test) ->
+  arrayTest: (test) ->
     collectionLink = getLink('dev-test-database', 1)
-    wrappedClient.readDocumentsArray(collectionLink, {maxItemCount: 1000}, (err, response, headers, pages) ->
+    wrappedClient.readDocumentsArrayAsyncJSIterator([collectionLink, {maxItemCount: 5}], (err, response) ->
       if err?
         console.dir(err)
         throw new Error("Got error when trying to readDocumentsArray via WrappedClient")
-      test.equal(response.length, docsRemaining)
-      test.ok(pages >= docsRemaining/1000)
+      test.equal(response.response.length, docsRemaining)
+      test.ok(response.headers?)
+      test.ok(response.other > 1)
       test.done()
     )
 
-  toArrayTest: (test) ->
+  createDocumentTest: (test) ->
     collectionLink = getLink('dev-test-database', 1)
-    wrappedClient.readDocuments(collectionLink, {maxItemCount: 1000}).toArray((err, response, headers, pages) ->
+    wrappedClient.createDocumentAsyncJSIterator([collectionLink, {a: 1}], (err, response) ->
       if err?
         console.dir(err)
         throw new Error("Got error when trying to readDocumentsArray via WrappedClient")
-      test.equal(response.length, docsRemaining)
-      test.ok(pages >= docsRemaining/1000)
+      test.equal(response.response.a, 1)
+      test.ok(response.headers?)
+      test.ok(response.other?)
       test.done()
     )
 
-  negativeOneMaxItemCountTest: (test) ->
+  asyncMapTest: (test) ->
+    docs = [
+      {a: 1},
+      {b: 2}
+    ]
     collectionLink = getLink('dev-test-database', 1)
-    wrappedClient.readDocuments(collectionLink, {maxItemCount: -1}).toArray((err, response, headers, pages) ->
+    parametersArray = ([collectionLink, doc] for doc in docs)
+
+    async.map(parametersArray, wrappedClient.createDocumentAsyncJSIterator, (err, result) ->
       if err?
-        console.dir(err)
-        throw new Error("Got error when trying to readDocumentsArray via WrappedClient")
-      test.equal(response.length, docsRemaining)
-      if pages < 2
-        console.log("Didn't have enough docs in the test to cause this test to need more than one round trip. Please either rerun after maybe increasing docsRemaining")
-      test.ok(pages > 1)
+        throw new Error("Got unexpected error in asyncMapTest")
+      test.equal(result.length, docs.length)
+      test.equal(result[0].response.a, docs[0].a)
+      test.equal(result[1].response.b, docs[1].b)
       test.done()
     )
 

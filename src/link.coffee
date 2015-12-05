@@ -32,8 +32,12 @@ combineTwoLevels = (prefixArray, valuesArray) ->
   else
     return links
 
-module.exports = (parameters...) ->
-  defaultPrefixes = _.cloneDeep(DEFAULT_PREFIXES)
+
+getLinkArray = (parameters...) ->
+  if parameters[parameters.length - 1][0] is 'dbs'
+    defaultPrefixes = parameters.pop()
+  else
+    defaultPrefixes = _.cloneDeep(DEFAULT_PREFIXES)
   prefixArray = []
   valuesArray = []
   defaultStillValid = true
@@ -70,3 +74,24 @@ module.exports = (parameters...) ->
         throw new Error('Cannot use default prefixes after non-default prefixes have been used')
 
   return combineTwoLevels(prefixArray, valuesArray)
+
+getLink = (parameters...) ->
+  links = getLinkArray(parameters...)
+  if links.length > 1
+    throw new Error("getLink was called with parameters that cause it to come back with more than one link")
+  else if links.length < 1
+    return undefined
+  else
+    return links[0]
+
+getDocOrAttachmentLink = (parameters...) ->
+  defaultPrefixes = ['dbs', 'colls', 'docs', 'attachments']
+  links = getLinkArray(parameters..., defaultPrefixes)
+  if links.length > 1
+    throw new Error("getLink was called with parameters that cause it to come back with more than one link")
+  else if links.length < 1
+    return undefined
+  else
+    return links[0]
+
+module.exports = {getDocLink: getDocOrAttachmentLink, getAttachmentLink: getDocOrAttachmentLink, getLink, getLinkArray}

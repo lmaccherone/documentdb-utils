@@ -1,7 +1,7 @@
 path = require('path')
 fs = require('fs')
 expandSproc = require(path.join(__dirname, 'expandSproc'))
-getLinkArray = require(path.join(__dirname, 'getLinkArray'))
+{getLinkArray} = require(path.join(__dirname, 'link'))
 async = require('async')
 
 loadSprocToOneCollection = (spec, callback) ->  # spec: {collectionLink, sproc, client}

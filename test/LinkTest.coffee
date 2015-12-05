@@ -1,6 +1,6 @@
 path = require('path')
-getLink = require(path.join(__dirname, '..', 'src', 'getLink'))
-getLinkArray = require(path.join(__dirname, '..', 'src', 'getLinkArray'))
+
+{getLink, getDocLink, getAttachmentLink, getLinkArray} = require('../')
 
 exports.linkTest =
 
@@ -11,7 +11,7 @@ exports.linkTest =
     l2 = getLink(1, {users: 'myUser'})
     test.equal(l2, "dbs/1/users/myUser")
 
-    l3 = sprocLink = getLink('dev-test-database', 1, 'createVariedDocuments')
+    l3 = getLink('dev-test-database', 1, 'createVariedDocuments')
     test.equal(l3, "dbs/dev-test-database/colls/1/sprocs/createVariedDocuments")
 
     collectionLink = getLink('dev-test-database', 1)
@@ -19,6 +19,12 @@ exports.linkTest =
 
     sprocLink = getLink(collectionLink, 'createVariedDocuments')
     test.equal(sprocLink, 'dbs/dev-test-database/colls/1/sprocs/createVariedDocuments')
+
+    docLink = getDocLink(collectionLink, 'myDoc')
+    test.equal(docLink, 'dbs/dev-test-database/colls/1/docs/myDoc')
+
+    docLink = getAttachmentLink('a', '1', 'myDoc', 'myAttachment')
+    test.equal(docLink, 'dbs/a/colls/1/docs/myDoc/attachments/myAttachment')
 
     test.done()
 

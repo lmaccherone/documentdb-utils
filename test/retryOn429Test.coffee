@@ -1,10 +1,8 @@
 path = require('path')
 {DocumentClient} = require('documentdb')
-WrappedClient = require(path.join(__dirname, "..", "src", "WrappedClient"))
-loadSprocs = require(path.join(__dirname, "..", "src", "loadSprocs"))
-getLinkArray = require(path.join(__dirname, "..", "src", "getLinkArray"))
-getLink = require(path.join(__dirname, "..", "src", "getLink"))
 async = require('async')
+{WrappedClient, loadSprocs, getLinkArray, getLink} = require('../')
+
 
 client = null
 docsRemaining = 8000

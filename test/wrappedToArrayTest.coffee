@@ -51,16 +51,16 @@ exports.wrappedToArrayTest =
       test.done()
     )
 
-#  toArrayTest: (test) ->
-#    collectionLink = getLink('dev-test-database', 1)
-#    wrappedClient.readDocuments(collectionLink, {maxItemCount: 1000}).toArray((err, response, headers, pages) ->
-#      if err?
-#        console.dir(err)
-#        throw new Error("Got error when trying to readDocumentsArray via WrappedClient")
-#      test.equal(response.length, docsRemaining)
-#      test.ok(pages >= docsRemaining/1000)
-#      test.done()
-#    )
+  toArrayTest: (test) ->
+    collectionLink = getLink('dev-test-database', 1)
+    wrappedClient.readDocuments(collectionLink, {maxItemCount: 1000}).toArray((err, response, headers, pages) ->
+      if err?
+        console.dir(err)
+        throw new Error("Got error when trying to readDocumentsArray via WrappedClient")
+      test.equal(response.length, docsRemaining)
+      test.ok(pages >= docsRemaining/1000)
+      test.done()
+    )
 
   tearDown: (callback) ->
     f = () ->

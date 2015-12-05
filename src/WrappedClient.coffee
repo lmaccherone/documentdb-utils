@@ -24,21 +24,7 @@ wrapQueryIteratorMethodForArray = (_client, _method, defaultRetries) ->
     callback = parameters.pop()
     _iterator = _method.call(_client, parameters...)
     iterator = new WrappedQueryIterator(_iterator, defaultRetries)
-    all = []
-    pages = 0
-    innerF = () ->
-      iterator.executeNext((err, response, headers, retries) ->
-        if err?
-          callback(err, response, headers, pages)
-        else
-          pages++
-          all = all.concat(response)
-          if iterator.hasMoreResults()
-            innerF()
-          else
-            callback(err, all, headers, pages)
-      )
-    return innerF(parameters...)
+    return iterator.toArray(callback)
   return f
 
 wrapToArray = (iterator) ->

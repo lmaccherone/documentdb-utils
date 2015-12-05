@@ -62,7 +62,7 @@ exports.wrappedToArrayTest =
       test.done()
     )
 
-  toArrayTest: (test) ->
+  negativeOneMaxItemCountTest: (test) ->
     collectionLink = getLink('dev-test-database', 1)
     wrappedClient.readDocuments(collectionLink, {maxItemCount: -1}).toArray((err, response, headers, pages) ->
       if err?

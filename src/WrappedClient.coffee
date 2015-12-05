@@ -3,17 +3,13 @@ _ = require('lodash')
 delay = (ms, func) ->
   setTimeout(func, ms)
 
-wrapQueryIteratorMethodForAll = (_client, _method) ->
-  f = (parameters...) ->
-    iterator = _method.call(_client, parameters...)
-    return iterator
-  return f
-
 WrappedQueryIterator = class
   constructor: (@_iterator, @defaultRetries) ->
     for methodName, _method of @_iterator
-      if methodName in ['executeNext']
+      if methodName in ['executeNext', 'forEach', 'nextItem']
         this[methodName] = wrapCallbackMethod(@_iterator, _method, @defaultRetries)
+      else if methodName is 'toArray'
+        this[methodName] = wrapToArray(this)
       else
         this[methodName] = wrapSimpleMethod(@_iterator, _method)
 
@@ -21,6 +17,47 @@ wrapQueryIteratorMethod = (_client, _method, defaultRetries) ->
   f = (parameters...) ->
     _iterator = _method.call(_client, parameters...)
     return new WrappedQueryIterator(_iterator, defaultRetries)
+  return f
+
+wrapQueryIteratorMethodForArray = (_client, _method, defaultRetries) ->
+  f = (parameters...) ->
+    callback = parameters.pop()
+    _iterator = _method.call(_client, parameters...)
+    iterator = new WrappedQueryIterator(_iterator, defaultRetries)
+    all = []
+    pages = 0
+    innerF = () ->
+      iterator.executeNext((err, response, headers, retries) ->
+        if err?
+          callback(err, response, headers, pages)
+        else
+          pages++
+          all = all.concat(response)
+          if iterator.hasMoreResults()
+            innerF()
+          else
+            callback(err, all, headers, pages)
+      )
+    return innerF(parameters...)
+  return f
+
+wrapToArray = (iterator) ->
+  f = (callback) ->
+    all = []
+    pages = 0
+    innerF = () ->
+      iterator.executeNext((err, response, headers, retries) ->
+        if err?
+          callback(err, response, headers, pages)
+        else
+          pages++
+          all = all.concat(response)
+          if iterator.hasMoreResults()
+            innerF()
+          else
+            callback(err, all, headers, pages)
+      )
+    return innerF()
   return f
 
 wrapSimpleMethod = (that, _method) ->
@@ -37,6 +74,7 @@ wrapCallbackMethod = (that, _method, defaultRetries) ->
         if err?
           if err.code in [429, 449] and retriesLeft > 0
             retryAfter = headers['x-ms-retry-after-ms'] or 1
+            retryAfter = Number(retryAfter)
             retries++
             delay(retryAfter, () ->
               innerF(retriesLeft - 1, parameters...)
@@ -58,6 +96,7 @@ wrapExecuteStoredProcedure = (_client, _method, defaultRetries) ->
         if err?
           if err.code in [429, 449] and retriesLeft > 0
             retryAfter = headers['x-ms-retry-after-ms'] or 1
+            retryAfter = Number(retryAfter)
             delay(retryAfter, () ->
               innerF(retriesLeft - 1, parameters...)
             )
@@ -97,7 +136,7 @@ module.exports = class WrappedClient
       else if _.startsWith(methodName, 'query') or  # These all return a QueryIterator
               _.startsWith(methodName, 'read') and _.endsWith(methodName, 's')
         this[methodName] = wrapQueryIteratorMethod(@_client, _method, @defaultRetries)
-        this[methodName + 'All'] = wrapQueryIteratorMethodForAll(@_client, _method, @defaultRetries)
+        this[methodName + 'Array'] = wrapQueryIteratorMethodForArray(@_client, _method, @defaultRetries)
       else  # When I checked, these were all functions that had neither callbacks or returned QueryIterator. They appear to be utility functions.
         # do nothing
 

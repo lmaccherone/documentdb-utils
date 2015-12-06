@@ -148,7 +148,8 @@ Here is an example of a stored procedure that counts all the documents in a coll
 
 ## Changelog ##
 
-* 0.4.0 - 2015-12-02 - **WARNING - Major backward breaking changes** 
+* 0.4.1 - 2015-12-06 - Fixed `cake compile` and `cake clean` so the .js files are uploaded to npm
+* 0.4.0 - 2015-12-05 - **WARNING - Major backward breaking changes** 
   Since documentdb-utils was introduced, DocumentDB has added id-based links, upserts, and maxItemCount = -1. The lack of these
   features were 3 of the 4 primary motivations for the creation of documentdb-utils. The only remaining big motivator is
   authomatic retries upon 429 errors. However, I now believe that the best way to provide that is by wrapping the appropriate methods

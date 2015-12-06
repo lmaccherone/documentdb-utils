@@ -1,5 +1,7 @@
 fs = require('fs')
 spawnSync = require('child_process').spawnSync
+path = require('path')
+_ = require('lodash')
 
 runSync = (command, options, next) ->
   {stderr, stdout} = runSyncRaw(command, options)
@@ -25,24 +27,22 @@ runSyncRaw = (command, options) ->
 
 task('compile', 'Compile CoffeeScript source files to JavaScript', () ->
   process.chdir(__dirname)
-  fs.readdir('./', (err, contents) ->
+  folders = ['.', 'sprocs', 'src']
+  for folder in folders
+    pathToCompile = path.join(__dirname, folder)
+    contents = fs.readdirSync(pathToCompile)
     files = ("#{file}" for file in contents when (file.indexOf('.coffee') > 0))
-    runSync('coffee', ['--map', '-c'].concat(files))
-  )
+    files = (path.join(folder, file) for file in files)
+    runSync(path.join(__dirname, 'node_modules', '.bin', 'coffee'), ['--map', '-c'].concat(files))
 )
 
 task('clean', 'Deletes .js and .map files', () ->
-  console.error('this is not working correctly!!!')
   folders = ['.', 'sprocs', 'src']
   for folder in folders
     pathToClean = path.join(__dirname, folder)
-    console.log(pathToClean)
-    fs.readdirSync(pathToClean, (err, contents) ->
-      console.log(contents)
-      for file in contents when (endsWith(file, '.js') or endsWith(file, '.map'))
-        console.log(file)
-        fs.unlinkSync(path.join(pathToClean, file))
-    )
+    contents = fs.readdirSync(pathToClean)
+    for file in contents when (_.endsWith(file, '.js') or _.endsWith(file, '.map'))
+      fs.unlinkSync(path.join(pathToClean, file))
 )
 
 task('test', 'UNIMPLEMENTED - Run the CoffeeScript test suite with nodeunit', () ->

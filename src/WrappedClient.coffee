@@ -1,4 +1,5 @@
 _ = require('lodash')
+async = require('async')
 
 delay = (ms, func) ->
   setTimeout(func, ms)
@@ -58,6 +59,33 @@ wrapToCreateAsyncJSIterator = (that, _method) ->
     )
   return f
 
+wrapMultiMethod = (that, asyncJSIterator) ->
+  f = (parameters...) ->
+    callback = parameters.pop()
+    linkArray = parameters.shift()
+    unless _.isArray(linkArray)
+      linkArray = [linkArray]
+    items = ([link].concat(parameters) for link in linkArray)
+    return async.map(items, asyncJSIterator, (err, results) ->
+      concatenatedResults = []
+      stats = {roundTripCount: 0, itemCount: 0, requestUnitCharges: 0}
+      for result in results
+        if _.isArray(result.response)
+          concatenatedResults = concatenatedResults.concat(result.response)
+        else
+          concatenatedResults.push(result.response)
+        headers = result.headers
+        stats.roundTripCount += result.other
+        stats.itemCount += Number(headers['x-ms-item-count'])
+        stats.requestUnitCharges += Number(headers['x-ms-request-charge'])
+      if _.isNaN(stats.roundTripCount)
+        delete stats.roundTripCount
+      if _.isNaN(stats.itemCount)
+        delete stats.itemCount
+      callback(err, concatenatedResults, stats)
+    )
+  return f
+
 wrapCallbackMethod = (that, _method, defaultRetries) ->
   retries = 0
   f = (parameters...) ->
@@ -114,11 +142,17 @@ module.exports = class WrappedClient
       if typeof _method isnt 'function'
         continue
 
-      methodSpec = _method.toString().split('\n')[0]
       hasArrayVersion = _.startsWith(methodName, 'query') or
                         _.startsWith(methodName, 'read') and _.endsWith(methodName, 's')
-      firstParameterIsCollectionLink = methodSpec.indexOf('(collectionLink') >= 0
-      lastParameterIsCallback = methodSpec.indexOf('callback)') >= 0
+      methodSpec = _method.toString().split('\n')[0]
+      indexOfLeftParen = methodSpec.indexOf('(')
+      indexOfRightParen = methodSpec.indexOf(')')
+      parameterListString = methodSpec.substr(indexOfLeftParen + 1, indexOfRightParen - indexOfLeftParen - 1)
+      parameterList = parameterListString.split(', ')
+
+      firstParameterIsLink = _.endsWith(parameterList[0], 'Link')
+      lastParameterIsCallback = parameterList[parameterList.length - 1] is 'callback'
+
       if methodName is 'executeStoredProcedure'
         this[methodName] = wrapExecuteStoredProcedure(@_client, _method, @defaultRetries)
       else if lastParameterIsCallback
@@ -130,13 +164,14 @@ module.exports = class WrappedClient
       else  # When I checked, these were all functions that had neither callbacks nor returned QueryIterator. They appear to be utility functions.
         # do nothing
 
-      if firstParameterIsCollectionLink
+      if firstParameterIsLink
         if hasArrayVersion
           methodNameToWrap = methodName + 'Array'
         else
           methodNameToWrap = methodName
-        console.log(methodNameToWrap)
-        this[methodNameToWrap + 'AsyncJSIterator'] = wrapToCreateAsyncJSIterator(this, this[methodNameToWrap])
 
+        asyncJSMethod = wrapToCreateAsyncJSIterator(this, this[methodNameToWrap])
+        this[methodNameToWrap + 'AsyncJSIterator'] = asyncJSMethod
+        this[methodNameToWrap + 'Multi'] = wrapMultiMethod(this, asyncJSMethod)
 
 

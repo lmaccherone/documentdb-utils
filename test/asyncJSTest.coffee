@@ -81,6 +81,20 @@ exports.asyncJSTest =
       test.done()
     )
 
+  sprocAsyncMapTest: (test) ->
+    sprocLink = getLink('dev-test-database', 1, 'countDocuments')
+    parametersArray = [[sprocLink]]
+
+    async.map(parametersArray, wrappedClient.executeStoredProcedureAsyncJSIterator, (err, result) ->
+      if err?
+        console.dir(err)
+        throw new Error("Got unexpected error in asyncMapTest")
+      test.equal(result[0].response.count, docsRemaining)
+      test.ok(result[0].headers?)
+      test.ok(result[0].other is undefined)
+      test.done()
+    )
+
   tearDown: (callback) ->
     f = () ->
       client.deleteDatabase('dbs/dev-test-database', () ->

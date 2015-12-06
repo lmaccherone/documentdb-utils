@@ -33,7 +33,7 @@ task('compile', 'Compile CoffeeScript source files to JavaScript', () ->
     contents = fs.readdirSync(pathToCompile)
     files = ("#{file}" for file in contents when (file.indexOf('.coffee') > 0))
     files = (path.join(folder, file) for file in files)
-    runSync(path.join(__dirname, 'node_modules', '.bin', 'coffee'), ['--map', '-c'].concat(files))
+    runSync(path.join(__dirname, 'node_modules', '.bin', 'coffee'), ['-c'].concat(files))
 )
 
 task('clean', 'Deletes .js and .map files', () ->
@@ -84,6 +84,7 @@ task('publish', 'Publish to npm and add git tags', () ->
           console.log('creating git tag')
           runSyncNoExit("git", ["tag", "v#{require('./package.json').version}"])
           runSyncNoExit("git", ["push", "--tags"])
+          runSync('cake', ['clean'])
       else
         console.error('Origin and master out of sync. Not publishing.')
     else

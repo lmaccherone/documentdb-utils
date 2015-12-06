@@ -1,14 +1,10 @@
-# documentDBUtils #
+# documentdb-utils #
 
 Copyright (c) 2015, Lawrence S. Maccherone, Jr.
 
-_Drop-in replacement + extensions for Azure's DocumentDB node.js client with auto-retry on 429 errors plus a lot more_
+_Drop-in replacement + extensions for DocumentDB node.js client with auto-retry on 429 errors plus a lot more_
 
-The node.js client for Microsoft Azure DocumentDB is a thin wrapper around the REST API. That's fine but it means that 
-you need to deal with all the complications of throttling retries, the restoring and continuation of stored procedures 
-that have reached their resource limits, etc.
-
-In summary, documentdb-utils takes care of all of this for you and makes it much easier to use Microsoft Azure DocumentDB from node.js.
+By functionality like automatic retries on 429 errors among other things, documentdb-utils makes it much easier to use Microsoft Azure DocumentDB from node.js.
 
 Note, versions prior to 0.4.0 had a very different interface exposed as documentDBUtils. That has now been removed in favor of this drop-in replacement + extensions approach.
 
@@ -48,7 +44,12 @@ Note, versions prior to 0.4.0 had a very different interface exposed as document
 
 * countDocuments, createSpecificDocuments, createVariedDocuments, deleteSomeDocuments, updateSomeDocuments sprocs to use as-is or as a starting point for your own sprocs
 
-* lodash and async.js exported as _ and async respectively
+* [lodash](https://lodash.com) and [async.js](https://github.com/caolan/async) exported as _ and async respectively
+
+* [sql-from-mongo](https://www.npmjs.com/package/sql-from-mongo) exported as sqlFromMongo
+
+* documentdb.Base.generateGuidId exported and aliased as getGUID in addition to generateGuidId
+
 
 
 ## Install ##
@@ -57,6 +58,28 @@ Note, versions prior to 0.4.0 had a very different interface exposed as document
 
 
 ## Usage ##
+
+If you put your urlConnection and masterkey in DOCUMENT_DB_URL and DOCUMENT_DB_KEY environment variables (recommended), you can simply `new WrappedClient()` with no parameters.
+
+    {WrappedClient} = require('documentdb-utils')
+    client = new WrappedClient()
+    
+If you want to use environment variables for the first two parameters but specify a connectionPolicy and/or consistencyLevel, then simply pass in null for the first two parameters.
+
+    {WrappedClient} = require('documentdb-utils')
+    client = new WrappedClient(null, null, connectionPolicy, consistencyLevel)
+    
+You can also pass in the same parameters as the Azure client (urlConnection, auth, connectionPolicy, consistencyLevel) with the last two being optional.
+
+    {WrappedClient} = require('documentdb-utils')
+    client = new WrappedClient(urlConnection, auth, connectionPolicy, consistencyLevel)
+
+Alternatively, if you've already created your own instance of the Azure client, you can pass that in as the first parameter.
+
+    {WrappedClient} = require('documentdb-utils')
+    {DocumentClient} = require('documentdb')
+    _client = new DocumentClient(urlConnection, auth)
+    client = new WrappedClient(_client)
 
 ### A Stored Procedure Example ###
 

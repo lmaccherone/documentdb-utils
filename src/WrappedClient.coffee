@@ -1,5 +1,6 @@
 _ = require('lodash')
 async = require('async')
+{DocumentClient} = require('documentdb')
 
 delay = (ms, func) ->
   setTimeout(func, ms)
@@ -135,9 +136,16 @@ wrapExecuteStoredProcedure = (_client, _method, defaultRetries) ->
   return f
 
 module.exports = class WrappedClient
-  constructor: (@_client, @defaultRetries) ->
-    unless @defaultRetries?
-      @defaultRetries = 3
+  constructor: (@urlConnection, @auth, @connectionPolicy, @consistencyLevel) ->
+    if @urlConnection instanceof DocumentClient
+      @_client = @urlConnection
+    else
+      @urlConnection = @urlConnection or process.env.DOCUMENT_DB_URL
+      masterKey = process.env.DOCUMENT_DB_KEY
+      @auth = @auth or {masterKey}
+      @_client = new DocumentClient(@urlConnection, @auth, @connectionPolicy, @consistencyLevel)
+
+    @defaultRetries = 3
     for methodName, _method of @_client
       if typeof _method isnt 'function'
         continue

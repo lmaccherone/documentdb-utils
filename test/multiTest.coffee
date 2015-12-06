@@ -9,14 +9,14 @@ wrappedClient = null
 docsRemaining = 10
 docsRetrieved = 0
 
-exports.asyncJSTest =
+exports.multiTest =
 
   setUp: (callback) ->
     urlConnection = process.env.DOCUMENT_DB_URL
     masterKey = process.env.DOCUMENT_DB_KEY
     auth = {masterKey}
     client = new DocumentClient(urlConnection, auth)
-    wrappedClient = new WrappedClient(client)
+    wrappedClient = new WrappedClient()
     client.deleteDatabase('dbs/dev-test-database', () ->
       client.createDatabase({id: 'dev-test-database'}, (err, response, headers) ->
         databaseLink = 'dbs/dev-test-database'

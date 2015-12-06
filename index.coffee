@@ -10,4 +10,6 @@ module.exports =
   getAttachmentLink: link.getAttachmentLink
   getLinkArray: link.getLinkArray
   loadSprocs: require(path.join(__dirname, 'src', 'loadSprocs'))
+  _: require('lodash')
+  async: require('async')
 

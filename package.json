@@ -1,7 +1,7 @@
 {
   "name": "documentdb-utils",
   "version": "0.4.0",
-  "description": "Drop-in replacement for Azure's DocumentDB node.js client with auto-retry on 429 errors plus a lot more",
+  "description": "Drop-in replacement+wrapper for Azure's DocumentDB node.js client with auto-retry on 429 errors plus a lot more",
   "main": "./index",
   "scripts": {
     "test": "nodeunit",

@@ -2,15 +2,15 @@
 
 Copyright (c) 2015, Lawrence S. Maccherone, Jr.
 
-_Ease-of-use and enterprise-class robustness wrapper for Azure's DocumentDB API_
+_Drop-in replacement + extensions for Azure's DocumentDB node.js client with auto-retry on 429 errors plus a lot more_
 
 The node.js client for Microsoft Azure DocumentDB is a thin wrapper around the REST API. That's fine but it means that 
 you need to deal with all the complications of throttling retries, the restoring and continuation of stored procedures 
-that have reached their resource limits, etc. Also, every operation requires that you have the link to the database, 
-collection, stored procedure, etc. You currently have to fetch the links yourself by first querying for them using the 
-human readable IDs further complicating your already mind-boggling-hard-to-write async code.
+that have reached their resource limits, etc.
 
-In summary, documentDBUtils takes care of all of this for you and makes it much easier to use Microsoft Azure DocumentDB from node.js.
+In summary, documentdb-utils takes care of all of this for you and makes it much easier to use Microsoft Azure DocumentDB from node.js.
+
+Note, versions prior to 0.4.0 had a very different interface exposed as documentDBUtils. That has now been removed in favor of this drop-in replacement + extensions approach.
 
 
 ## Source code ##
@@ -20,29 +20,35 @@ In summary, documentDBUtils takes care of all of this for you and makes it much 
 
 ## Features ##
 
-### Working ###
+### Drop-in enhanced functionality ###
 
-* All Stored Procedure operations
+* All methods and functionality of the Microsoft Azure node.js client with the exact same signature so you can drop this into your code and get an instantaneos upgrade.
 
-* All single-document operations (except Attachments) 
-
-* Use the human readable IDs to perform operations rather than needing to pre-fetch the database, collection, or entity links.
-
-* Automatically handles 429 throttling responses by delaying the specified amount of time and retrying.
+* Automatically handles 429 throttling responses by retrying after the delay specified by the prior operation.
 
 * Automatically deals with early termination of stored procedures for exceeding resources. Just follow a simple pattern (memoization like that used in a reduce function) for writing your stored procedures. The state will be shipped back to the calling side and the stored procedure will be called again picking back up right where it left off.
 
-* Full traceability while executing by setting debug=true.
+### Extended functionality ###
 
-* Stats on setup time, stored procedure execution time, time lost to throttling, number of stored procedure continuations were required, etc.
+* `<old-method>Array(..., callback)` as short-hand for `.toArray()` calls. Example:  `readDocumentsArray(collectionLink, callback)`
 
-### Unimplemented ###
+* `<old-method>Multi(linkArray, ..., callback)` and `<old-method>ArrayMulti(linkArray, ..., callback)` as automatic fan-out to multiple collections, sprocs, etc. for each method whose first parameter is a link. If you want to run the same query against multiple collections or call a sproc by the same name in different collections, you can now do that with one line. The results are automatically aggregated into a single callback response. Example: `executeStoredProcedureMulti(arrayOfCollecitonLinks, 'countDocuments', callback)`.
 
-* Triggers, UDFs, and Attachments.
+* Stats on the number of round trips and RU costs used by each operation even when the operation is expanded to many low-level operations.
 
-* Queries and bulk document reads.
+* `<old-method>AsyncJSIterator(item, callback)` wrapper of methods to enable use of async.js's higher order functions like map, filter, etc. This is used internally to provide the multi-link capability but you can use it yourself to compose your own.
 
-* Delete Databases or Collections. We automatically create them if they are referenced, but we have no funtionality for deleting them.
+### The kitchen sink ###
+
+* link and link array generator. Example: `getLinkArray('myDB', [1, 2], 'mySproc')` results in `['dbs/myDB/colls/1/sprocs/mySproc', 'dbs/myDB/colls/2/sprocs/mySproc']`
+
+* expandSproc functionality allows you to "require" npm modules from within your stored procedures as well as DRY for utility functions in your sprocs
+
+* loadSprocs automatically expands and loads every sproc in a directory to a list of collections
+
+* countDocuments, createSpecificDocuments, createVariedDocuments, deleteSomeDocuments, updateSomeDocuments sprocs to use as-is or as a starting point for your own sprocs
+
+* lodash and async.js exported as _ and async respectively
 
 
 ## Install ##
@@ -65,121 +71,17 @@ or if you prefer JavaScript saved in hello.js.
       getContext().getResponse().setBody('Hello world!');
     }
    
-Now let's write some CoffeeScript (or equivalent JavaScript) to send and execute this on the server:
+Now let's write some CoffeeScript (or equivalent JavaScript) to send and execute this on two different collections:
 
-    documentDBUtils = require('documentdb-utils')
-  
-    {hello} = require('./hello')
-  
-    config =
-      databaseID: 'test-stored-procedure'
-      collectionID: 'test-stored-procedure'
-      storedProcedureID: 'hello'
-      storedProcedureJS: hello
-      memo: {}
-  
-    processResponse = (err, response) ->
-      if err?
-        throw err
-      console.log(response.memo)
-    
-    documentDBUtils(config, processResponse)
   
 Execute with something like: `coffee tryHello.coffee`. You should see `Hello world!` as your output.
-
-Note, that we did not include any authorization information or connection strings in our config. That's because it will pull from these two environment variables:
-
-* DOCUMENT_DB_URL - The URL for the DocumentDB
-* DOCUMENT_DB_KEY - The API key
-
-Alternatively, you can provide `config.urlConnection` and `config.auth.masterKey` or any other valid `config.auth` as specified by the DocumentDB API.
-  
-Also, note that the response includes information about the execution. Add `console.log(response.stats)` to the end of your processResponse function to see timings for setup, execution, and lost to throttling as well as the number of round-trips to to stored procedure yields, etc.
-
-Additionally, the response comes back with the links (and full objects) for whatever it needed to fetch to do its job. For this example, it will have `database`, `databaseLink`, `collection`, `collectionLink`, `storedProcedure`, and `storedProcedureLink` fields added to it. You can cache these to speed up subsequent work. For instance, the code below will create the stored procedure and execute (just as we did above) but use the returning storedProcedureLink to execute it a second time, much faster:
-
-    documentDBUtils = require('documentdb-utils')
-    
-    {hello} = require('./hello')
-    
-    config =
-      databaseID: 'test-stored-procedure'
-      collectionID: 'test-stored-procedure'
-      storedProcedureID: 'hello'
-      storedProcedureJS: hello
-      memo: {}
-    
-    processResponse = (err, response) ->
-      if err?
-        throw err
-      console.log('First execution including sending stored procedure to DocumentDB')
-      console.log(response.memo)
-      console.log(response.stats)
-      
-      config2 =
-        storedProcedureLink: response.storedProcedureLink
-        memo: {}
-      documentDBUtils(config2, (err, response) ->
-        if err
-          throw err
-        console.log('\nSecond execution')
-        console.log(response.memo)
-        console.log(response.stats)
-      )
-    
-    documentDBUtils(config, processResponse)
-
-And here is its output.
-
-    First execution including sending stored procedure to DocumentDB
-    Hello world!
-    { executionRoundTrips: 1,
-      setupTime: 1184,
-      executionTime: 304,
-      timeLostToThrottling: 0,
-      totalTime: 1488 }
-    
-    Second execution
-    Hello world!
-    { executionRoundTrips: 1,
-      setupTime: 0,
-      executionTime: 404,
-      timeLostToThrottling: 0,
-      totalTime: 404 }
-    
-Notice how documentDBUtils figures out what you want to do by what you send to it. Here's a table of what operations are performed based upon what you send to it.
-
-| ...ID, ...Link or full entity | storedProcedureJS | memo | Operation          |
-| :---------------------------: | :---------------: | :--: | :----------------: |
-| Yes                           | Yes               | Yes  | Upsert and Execute |
-| Yes                           | No                | Yes  | Execute            |
-| Yes                           | Yes               | No   | Upsert             |
-| Yes                           | No                | No   | Delete             |
-
-### Document Operations ###
-
-Document operations work pretty much the same way. Give it the right fields in the config object and documentDBUtils figures out what to do with it. The following table determines which document operations are performed with a given set of config fields:
-
-| documentLink | oldDocument | document | Operation |
-| :----------: | :---------: | :------: | :-------: |
-| No           | No          | Yes      | Create    |
-| Yes          | No          | No       | Read      |
-| Yes          | Yes         | Yes      | Update*   |
-| No           | Yes         | Yes      | Update*   |
-| Yes          | No          | Yes      | Replace   |
-| Yes          | Yes         | No       | Delete    |
-| No           | Yes         | No       | Delete    |
-
-For Delete, we don't actually need the entire oldDocument. We simply need the _etag field. If you do not supply the documentLink seperately, we will pull both the documentLink and the needed _etag fields from the oldDocument.
-
-\* Note, at this time, Update and Replace are actually full replace operations. It's my intent to upgrade it so that on update operations, if you provide only a partial list of fields, it will pull the remaining fields from the oldDocument and be a true update operation. The replace operation will still be triggerable by not supplying an oldDocument. 
 
 
 ## Pattern for writing stored procedures ##
 
 **The key to a general pattern for writing restartable stored procedures is to write them as if you were writing a reduce() function.**
 
-Note, if you follow this pattern, documentDBUtils automatically deals with early termination of stored procedures for exceeding resources. Just follow this simple pattern. The state will be shipped back to the calling side and the stored procedure will be called again picking back up right where it left off.
+Note, if you follow this pattern, the upgraded `executeStoredProcedure()` automatically deals with early termination of stored procedures for exceeding resources. Just follow this simple pattern. The state will be shipped back to the calling side and the stored procedure will be called again picking back up right where it left off.
 
 Pehaps the most common use of stored procedures is to aggregate or transform data. It's very easy to think of these as "reduce" operations just like Array.reduce() or the reduce implementations in underscore, async.js, or just about any other library with aggregation functionality. It stretches the "reduce" metaphore a bit, but the pattern itself is perfectly usefull even for stored procedures that write data.
 
@@ -282,25 +184,7 @@ Here is an example of a stored procedure that counts all the documents in a coll
 * 0.1.0 - 2015-05-03 - Initial release
 
 
-## Contributing to documentDBUtils ##
-
-### Triggers, UDFs, Queries, and Attachments ###
-
-As of 2015-05-03, documentDBUtils only supports stored procedures and single-document operations. If you need them, add them and submit a pull request.
-
-### Delete Databases or Collections ###
-
-Should be easy.
-
-### Explicitly specify an operation ###
-
-I realize that this design decision of automatically choosing an operation based upon which config.fields are provided might be controversial. If we added an optional "operation" field, then we could check to confirm that they provided the right config fields for that operation.
-
-### What about promises? ###
-
-Promises make the writing of waterfall pattern async much easier. However, I find that they make the writing of complicated ascyn patterns like retries and branching based upon the results of a response much harder. So, I have chosen not to use promises in the implementation of documentDBUtils.
-
-That said, since all of the complex async code is encapsulated inside of documentDBUtils, I want to implement a promises wrapper for documentDBUtils. I would gladly accept a pull-request for this.
+## To-do (pull requests desired) ##
 
 ### Documentation ###
 
@@ -328,13 +212,7 @@ handleLanguageSet: function(data) {}
 
 ### Tests ###
 
-I use the relatively simplistic documentdb-mock for writing automated tests for my own stored procedures and I regularly exercise documentDBUtils in the course of running those stored procedures. I also have done extensive exploratory testing on DocumentDB's behavior using documentDBUtils... even finding some edge cases in DocumentDB's behavior. :-) However, you cannot run DoucmentDB locally and I don't have the patience to fully mock it out so there are currently no automated tests.
-
-### Command line support ###
-
-At the very least it would be nice to provide a "binary" (really just CoffeeScript that starts with #!) that does the count of a collection with optional command-line parameter for filterQuery.
-
-However, it might also be nice to create a full CLI that would allow you to specify JavaScript (or even CoffeeScript) files that get pushed to stored procedures and executed. We'd have to support all of the same parameters. Then again, this might be unused functionality.
+I use the relatively simplistic documentdb-mock for writing automated tests for my own stored procedures and I regularly exercise documentDBUtils in the course of running those stored procedures. I also have done extensive exploratory testing on DocumentDB's behavior using documentDBUtils... even finding some edge cases in DocumentDB's behavior. :-) However, you cannot run DoucmentDB locally and I don't have the patience to fully mock it out so there are currently less than full test coverage.
 
 
 ## MIT License ##

@@ -41,39 +41,45 @@ getLinkArray = (parameters...) ->
   prefixArray = []
   valuesArray = []
   defaultStillValid = true
-  for parameter, i in parameters
-    if _.isPlainObject(parameter)
-      keys = _.keys(parameter)
-      if keys.length > 1
-        throw new Error("Parameters of type object must only have one key/value pair.")
-      defaultStillValid = false
-      prefixArray.push(keys[0])
-      valuesArray.push(_.values(parameter)[0])
-    else
-      if _.isString(parameter)
-        parameter = [parameter]
-      if defaultStillValid
-        firstValue = parameter[0] or parameter
-        firstValue = firstValue.toString()
-        if firstValue.indexOf('/') < 0
-          prefixArray.push(defaultPrefixes.shift())
-        else
-          segments = firstValue.split('/')
-          while defaultPrefixes[0] in segments
-            defaultPrefixes.shift()
-          prefixArray.push(null)
-        if _.isString(parameter)
-          valuesArray.push([parameter])
-        else if _.isNumber(parameter)
-          valuesArray.push([parameter.toString()])
-        else if _.isArray(parameter)
-          valuesArray.push(parameter)
-        else
-          throw new Error("Parameters for getLinkArray() must be of type string, number, array, or object")
+  if parameters.length is 1
+    list = parameters[0]
+    if not _.isArray(list)
+      list = [list]
+    return ('dbs/' + value for value in list)
+  else
+    for parameter, i in parameters
+      if _.isPlainObject(parameter)
+        keys = _.keys(parameter)
+        if keys.length > 1
+          throw new Error("Parameters of type object must only have one key/value pair.")
+        defaultStillValid = false
+        prefixArray.push(keys[0])
+        valuesArray.push(_.values(parameter)[0])
       else
-        throw new Error('Cannot use default prefixes after non-default prefixes have been used')
+        if _.isString(parameter)
+          parameter = [parameter]
+        if defaultStillValid
+          firstValue = parameter[0] or parameter
+          firstValue = firstValue.toString()
+          if firstValue.indexOf('/') < 0
+            prefixArray.push(defaultPrefixes.shift())
+          else
+            segments = firstValue.split('/')
+            while defaultPrefixes[0] in segments
+              defaultPrefixes.shift()
+            prefixArray.push(null)
+          if _.isString(parameter)
+            valuesArray.push([parameter])
+          else if _.isNumber(parameter)
+            valuesArray.push([parameter.toString()])
+          else if _.isArray(parameter)
+            valuesArray.push(parameter)
+          else
+            throw new Error("Parameters for getLinkArray() must be of type string, number, array, or object")
+        else
+          throw new Error('Cannot use default prefixes after non-default prefixes have been used')
 
-  return combineTwoLevels(prefixArray, valuesArray)
+    return combineTwoLevels(prefixArray, valuesArray)
 
 getLink = (parameters...) ->
   links = getLinkArray(parameters...)

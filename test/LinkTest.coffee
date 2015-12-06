@@ -14,6 +14,9 @@ exports.linkTest =
     l3 = getLink('dev-test-database', 1, 'createVariedDocuments')
     test.equal(l3, "dbs/dev-test-database/colls/1/sprocs/createVariedDocuments")
 
+    l4 = getLink('dev-test-database')
+    test.equal(l4, "dbs/dev-test-database")
+
     collectionLink = getLink('dev-test-database', 1)
     test.equal(collectionLink, 'dbs/dev-test-database/colls/1')
 
@@ -43,11 +46,20 @@ exports.linkTest =
     test.deepEqual(links, collectionLinks)
 
     # The defaults of dbs, colls, sprocs also work if any level is a string
+    links = getLinkArray(['myDB', 'myDB2'])
+    expected = [
+      'dbs/myDB',
+      'dbs/myDB2'
+    ]
+    test.deepEqual(links, expected)
+
+    # The defaults of dbs, colls, sprocs also work if any level is a string
     links = getLinkArray('myDB', ['col1', 'col2'], 'mySproc')
     expected = [
       'dbs/myDB/colls/col1/sprocs/mySproc',
       'dbs/myDB/colls/col2/sprocs/mySproc'
     ]
+    test.deepEqual(links, expected)
 
     # If you only have one for either the first or second list and you forget to put it in an array, that's fine
     links = getLinkArray('db1', ['col1', 'col2', 'col3'])

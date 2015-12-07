@@ -173,6 +173,7 @@ Here is an example of a stored procedure that counts all the documents in a coll
 
 ## Changelog ##
 
+* 0.4.4 - 2015-12-07 - Fix for udfs not being compiled, however, loadSprocs/loadUDFs still won't work with .js files
 * 0.4.3 - 2015-12-07 - Added loadUDFs and refactored loadSprocs
 * 0.4.2 - 2015-12-06 - Various cleanup
 * 0.4.1 - 2015-12-06 - Fixed `cake compile` and `cake clean` so the .js files are uploaded to npm

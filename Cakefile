@@ -27,7 +27,7 @@ runSyncRaw = (command, options) ->
 
 task('compile', 'Compile CoffeeScript source files to JavaScript', () ->
   process.chdir(__dirname)
-  folders = ['.', 'sprocs', 'src']
+  folders = ['.', 'sprocs', 'udfs', 'src']
   for folder in folders
     pathToCompile = path.join(__dirname, folder)
     contents = fs.readdirSync(pathToCompile)

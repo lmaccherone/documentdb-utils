@@ -68,6 +68,7 @@ getLinkArray = (parameters...) ->
             while defaultPrefixes[0] in segments
               defaultPrefixes.shift()
             prefixArray.push(null)
+
           if _.isString(parameter)
             valuesArray.push([parameter])
           else if _.isNumber(parameter)

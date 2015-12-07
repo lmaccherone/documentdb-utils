@@ -44,6 +44,10 @@ Note, versions prior to 0.4.0 had a very different interface exposed as document
 
 * countDocuments, createSpecificDocuments, createVariedDocuments, deleteSomeDocuments, updateSomeDocuments sprocs to use as-is or as a starting point for your own sprocs
 
+* getUnderscore mixin for sprocs which returns an object that implements the [underscore.js](http://underscorejs.org) API (couldn't get lodash to work). Yes, this works inside of sprocs.
+
+* getAsync mixin for sprocs which returns an object that implements the [async.js](https://github.com/caolan/async) API. Again, you can use this from sprocs.
+
 * [lodash](https://lodash.com) and [async.js](https://github.com/caolan/async) exported as _ and async respectively
 
 * [sql-from-mongo](https://www.npmjs.com/package/sql-from-mongo) exported as sqlFromMongo

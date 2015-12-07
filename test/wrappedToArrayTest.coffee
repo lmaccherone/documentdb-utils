@@ -51,7 +51,7 @@ exports.wrappedToArrayTest =
         throw new Error("Got error when trying to readDocumentsArray via WrappedClient")
       test.equal(response.length, docsRemaining)
       test.ok(pages >= docsRemaining/1000)
-      console.log("Total number of docs = #{docsRemaining} and maxItemCount = 1000 so should only need #{docsRemaining/1000} pages. Instead it takes #{page} pages")
+      console.log("Total number of docs = #{docsRemaining} and maxItemCount = 1000 so should only need #{docsRemaining/1000} pages. Instead it takes #{pages} pages")
       test.done()
     )
 

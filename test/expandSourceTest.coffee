@@ -40,3 +40,30 @@ exports.expandSourceTest =
     test.equal(result.id, 'sprocToExpand')
 
     test.done()
+
+
+  expandPrimativesTest: (test) ->
+    expected = '''
+      function () {
+          var x, y;
+          x = {
+            number: 1,
+            string: "hello",
+            booleanTrue: true,
+            booleanFalse: false,
+            specialNull: null,
+            specialNaN: null,
+            f: function () {
+                  return "hello";
+                }
+          };
+          y = 1;
+
+        }
+    '''
+
+    result = expandSource(path.join('..', 'test-examples', 'primativeToExpand'))
+    test.equal(result.body, expected)
+    test.equal(result.id, 'primativeToExpand')
+
+    test.done()

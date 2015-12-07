@@ -1,4 +1,5 @@
 path = require('path')
+_ = require('lodash')
 
 spaces = (n) ->
   a = new Array(n - 1)
@@ -45,14 +46,23 @@ insertMixins = (source, minify = false) ->
     toRequireString = toRequireString.substr(0, toRequireString.indexOf("'"))
     functionToInsert = require(toRequireString)
     spacesToIndent = startingSpacesCount(currentLine)
-    if typeof(functionToInsert) is 'function'
+    if _.isFunction(functionToInsert)
       functionToInsertString = indent(variableString + " = " + functionToInsert.toString() + ';\n', spacesToIndent)
-    else
+    else if _.isString(functionToInsert) or _.isBoolean(functionToInsert) or _.isNull(functionToInsert) or _.isNumber(functionToInsert)
+      functionToInsertString = indent(variableString + " = " + JSON.stringify(functionToInsert) + ';\n', spacesToIndent)
+    else if _.isPlainObject(functionToInsert)
       functionToInsertString = indent(variableString + " = {\n", spacesToIndent)
       stringsToInsert = []
       for key, value of functionToInsert
-        stringsToInsert.push(indent(key + ": " + value.toString(), spacesToIndent + 2))
+        if _.isFunction(value)
+          stringsToInsert.push(indent(key + ": " + value.toString(), spacesToIndent + 2))
+        else if _.isString(value) or _.isBoolean(value) or _.isNull(value) or _.isNumber(value)
+          stringsToInsert.push(indent(key + ": " + JSON.stringify(value), spacesToIndent + 2))
+        else
+          throw new Error("#{typeof(value)} is not a supported type for expandSource")
       functionToInsertString += stringsToInsert.join(',\n') + '\n' + indent('};', spacesToIndent)
+    else
+      throw new Error("#{typeof(functionToInsert)} is not a supported type for expandSource")
 
     sourceLines[i] = functionToInsertString
     sourceString = sourceLines.join('\n')

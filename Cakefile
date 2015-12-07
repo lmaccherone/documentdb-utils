@@ -37,7 +37,7 @@ task('compile', 'Compile CoffeeScript source files to JavaScript', () ->
 )
 
 task('clean', 'Deletes .js and .map files', () ->
-  folders = ['.', 'sprocs', 'src']
+  folders = ['.', 'sprocs', 'udfs', 'src']
   for folder in folders
     pathToClean = path.join(__dirname, folder)
     contents = fs.readdirSync(pathToClean)

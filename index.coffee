@@ -1,8 +1,10 @@
 # TODO: Add all the other functions to index.coffee
 path = require('path')
 
-link = require(path.join(__dirname, 'src', 'link'))
 documentdb = require('documentdb')
+
+link = require(path.join(__dirname, 'src', 'link'))
+loadScripts = require(path.join(__dirname, 'src', 'loadScripts'))
 
 module.exports =
   WrappedClient: require(path.join(__dirname, 'src', 'WrappedClient'))
@@ -10,7 +12,9 @@ module.exports =
   getDocLink: link.getDocLink
   getAttachmentLink: link.getAttachmentLink
   getLinkArray: link.getLinkArray
-  loadSprocs: require(path.join(__dirname, 'src', 'loadSprocs'))
+  loadSprocs: loadScripts.loadSprocs
+  expandSource: require(path.join(__dirname, 'src', 'expandSource'))
+  loadUDFs: loadScripts.loadUDFs
   _: require('lodash')
   async: require('async')
   sqlFromMongo: require('sql-from-mongo').sqlFromMongo

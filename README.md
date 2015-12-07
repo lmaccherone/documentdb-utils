@@ -40,7 +40,7 @@ Note, versions prior to 0.4.0 had a very different interface exposed as document
 
 * expandSproc functionality allows you to "require" npm modules from within your stored procedures as well as DRY for utility functions in your sprocs
 
-* loadSprocs automatically expands and loads every sproc in a directory to a list of collections
+* loadSprocs/loadUDFs automatically expands and loads every sproc/UDF in a directory to a list of collections
 
 * countDocuments, createSpecificDocuments, createVariedDocuments, deleteSomeDocuments, updateSomeDocuments sprocs to use as-is or as a starting point for your own sprocs
 
@@ -96,9 +96,11 @@ or if you prefer JavaScript saved in hello.js.
    
 Now let's write some CoffeeScript (or equivalent JavaScript) to send and execute this on two different collections:
 
+    TBD
   
 Execute with something like: `coffee tryHello.coffee`. You should see `Hello world!` as your output.
 
+    TBD
 
 ## Pattern for writing stored procedures ##
 
@@ -171,6 +173,8 @@ Here is an example of a stored procedure that counts all the documents in a coll
 
 ## Changelog ##
 
+* 0.4.3 - 2015-12-07 - Added loadUDFs and refactored loadSprocs
+* 0.4.2 - 2015-12-06 - Various cleanup
 * 0.4.1 - 2015-12-06 - Fixed `cake compile` and `cake clean` so the .js files are uploaded to npm
 * 0.4.0 - 2015-12-05 - **WARNING - Major backward breaking changes** 
   Since documentdb-utils was introduced, DocumentDB has added id-based links, upserts, and maxItemCount = -1. The lack of these

@@ -1,7 +1,7 @@
 path = require('path')
 {DocumentClient} = require('documentdb')
 async = require('async')
-{WrappedClient, loadSprocs, getLinkArray, getLink} = require('../')
+{WrappedClient, loadSprocs, loadUDFs, getLinkArray, getLink} = require('../')
 
 
 client = null
@@ -11,7 +11,7 @@ docsRetrieved = 0
 
 exports.asyncJSTest =
 
-  setUp: (callback) ->
+  setUp: (setUpCallback) ->
     urlConnection = process.env.DOCUMENT_DB_URL
     masterKey = process.env.DOCUMENT_DB_KEY
     auth = {masterKey}
@@ -22,19 +22,32 @@ exports.asyncJSTest =
         databaseLink = response._self
         client.createCollection(databaseLink, {id: '1'}, {offerType: 'S2'}, (err, response, headers) ->
           collectionLinks = getLinkArray(['dev-test-database'], [1])
-          sprocDirectory = path.join(__dirname, '..', 'sprocs')
-          spec = {sprocDirectory, client, collectionLinks}
-          loadSprocs(spec, (err, result) ->
-            if err?
-              console.dir(err)
-              throw new Error("Error during test setup")
-            sprocLink = getLink(collectionLinks[0], 'createVariedDocuments')
-            wrappedClient.executeStoredProcedure(sprocLink, {remaining: docsRemaining}, (err, response) ->
+          async.parallel([
+            (callback) ->
+              sourceDirectory = path.join(__dirname, '..', 'udfs')
+              udfSpec = {sourceDirectory, client, collectionLinks}
+              loadUDFs(udfSpec, (err, result) ->
+                sprocLink = getLink(collectionLinks[0], 'createVariedDocuments')
+                console.log("UDFs loaded for test")
+                callback(err, result)
+              )
+            , (callback) ->
+              sourceDirectory = path.join(__dirname, '..', 'sprocs')
+              spec = {sourceDirectory, client, collectionLinks}
+              loadSprocs(spec, (err, result) ->
+                console.log("sprocs loaded for test")
+                sprocLink = getLink(collectionLinks[0], 'createVariedDocuments')
+                wrappedClient.executeStoredProcedure(sprocLink, {remaining: docsRemaining}, (err, response) ->
+                  console.log("Documents created for test")
+                  callback(err, response)
+                )
+              )
+          ],
+            (err, results) ->
               if err?
-                throw new Error("Got error trying to create documents for test")
-              console.log("Documents created for test")
-              callback()
-            )
+                throw new Error("Got error trying to load sprocs, UDFs or call to createVariedDocuments sproc in test setup")
+              console.log("Test setup done")
+              setUpCallback()
           )
         )
       )

@@ -1,9 +1,9 @@
 path = require('path')
-expandSproc = require(path.join(__dirname, '..', 'src', 'expandSproc'))
+expandSource = require(path.join(__dirname, '..', 'src', 'expandSource'))
 
-exports.expandSprocTest =
+exports.expandSourceTest =
 
-  expandSprocTest: (test) ->
+  expandsourceTest: (test) ->
 
     expected = '''
       function () {
@@ -35,7 +35,7 @@ exports.expandSprocTest =
         }
     '''
 
-    result = expandSproc(path.join('..', 'test-examples', 'sprocToExpand'))
+    result = expandSource(path.join('..', 'test-examples', 'sprocToExpand'))
     test.equal(result.body, expected)
     test.equal(result.id, 'sprocToExpand')
 

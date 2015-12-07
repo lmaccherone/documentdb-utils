@@ -21,23 +21,23 @@ indent = (s, n) ->
       outputLines.push(line)
   return outputLines.join('\n')
 
-insertMixins = (sproc, minify = false) ->
+insertMixins = (source, minify = false) ->
 # TODO: Minify resulting string if specified
-  switch typeof(sproc)
+  switch typeof(source)
     when 'function'
-      sprocString = sproc.toString()
+      sourceString = source.toString()
     when 'string'
-      sprocString = sproc
+      sourceString = source
 
   keyString = "= require("
-  keyIndex = sprocString.indexOf(keyString)
+  keyIndex = sourceString.indexOf(keyString)
   if keyIndex >= 0
-    sprocLines = sprocString.split('\n')
+    sourceLines = sourceString.split('\n')
     i = 0
-    currentLine = sprocLines[i]
+    currentLine = sourceLines[i]
     while currentLine.indexOf(keyString) < 0
       i++
-      currentLine = sprocLines[i]
+      currentLine = sourceLines[i]
 
     keyIndex = currentLine.indexOf(keyString)
     variableString = currentLine.substr(0, keyIndex).trim()
@@ -54,17 +54,17 @@ insertMixins = (sproc, minify = false) ->
         stringsToInsert.push(indent(key + ": " + value.toString(), spacesToIndent + 2))
       functionToInsertString += stringsToInsert.join(',\n') + '\n' + indent('};', spacesToIndent)
 
-    sprocLines[i] = functionToInsertString
-    sprocString = sprocLines.join('\n')
-    insertMixins(sprocString, minify)
+    sourceLines[i] = functionToInsertString
+    sourceString = sourceLines.join('\n')
+    insertMixins(sourceString, minify)
   else
     if minify
       console.log('Minify not implemented yet')
 
-    return sprocString
+    return sourceString
 
-module.exports = (sprocFile) ->
-  sprocFunction = require(sprocFile)
-  id = path.basename(sprocFile, '.coffee')
-  body = insertMixins(sprocFunction.toString())
+module.exports = (sourceFile) ->
+  sourceFunction = require(sourceFile)
+  id = path.basename(sourceFile, '.coffee')
+  body = insertMixins(sourceFunction.toString())
   return {id, body}  # TODO: Update docs

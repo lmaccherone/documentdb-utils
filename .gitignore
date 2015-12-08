@@ -5,4 +5,4 @@ node_modules/
 *.map
 .play/
 
-!mixins/*.js
+!mixins/

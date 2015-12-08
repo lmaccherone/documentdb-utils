@@ -6,4 +6,3 @@ node_modules/
 .play/
 
 !mixins/
-!mixins/**

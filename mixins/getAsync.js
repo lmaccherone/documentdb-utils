@@ -4,6 +4,8 @@
  *
  * Copyright 2010-2014 Caolan McMahon
  * Released under the MIT license
+ *
+ * Modified by Larry Maccherone to work in DocumentDB sprocs 2015
  */
 module.exports = function () {
 

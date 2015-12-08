@@ -51,33 +51,34 @@ exports.wrappedToArrayTest =
         throw new Error("Got error when trying to readDocumentsArray via WrappedClient")
       test.equal(response.length, docsRemaining)
       test.ok(pages >= docsRemaining/1000)
-      console.log("Total number of docs = #{docsRemaining} and maxItemCount = 1000 so should only need #{docsRemaining/1000} pages. Instead it takes #{pages} pages")
+#      console.log(headers)
+#      console.log("Total number of docs = #{docsRemaining} and maxItemCount = 1000 so should only need #{docsRemaining/1000} pages. Instead it takes #{pages} pages")
       test.done()
     )
 
-#  toArrayTest: (test) ->
-#    collectionLink = getLink('dev-test-database', 1)
-#    wrappedClient.readDocuments(collectionLink, {maxItemCount: 1000}).toArray((err, response, headers, pages) ->
-#      if err?
-#        console.dir(err)
-#        throw new Error("Got error when trying to readDocumentsArray via WrappedClient")
-#      test.equal(response.length, docsRemaining)
-#      test.ok(pages >= docsRemaining/1000)
-#      test.done()
-#    )
-#
-#  negativeOneMaxItemCountTest: (test) ->
-#    collectionLink = getLink('dev-test-database', 1)
-#    wrappedClient.readDocuments(collectionLink, {maxItemCount: -1}).toArray((err, response, headers, pages) ->
-#      if err?
-#        console.dir(err)
-#        throw new Error("Got error when trying to readDocumentsArray via WrappedClient")
-#      test.equal(response.length, docsRemaining)
-#      if pages < 2
-#        console.log("Didn't have enough docs in the test to cause this test to need more than one round trip. Please either rerun after maybe increasing docsRemaining")
-#      test.ok(pages > 1)
-#      test.done()
-#    )
+  toArrayTest: (test) ->
+    collectionLink = getLink('dev-test-database', 1)
+    wrappedClient.readDocuments(collectionLink, {maxItemCount: 1000}).toArray((err, response, headers, pages) ->
+      if err?
+        console.dir(err)
+        throw new Error("Got error when trying to readDocumentsArray via WrappedClient")
+      test.equal(response.length, docsRemaining)
+      test.ok(pages >= docsRemaining/1000)
+      test.done()
+    )
+
+  negativeOneMaxItemCountTest: (test) ->
+    collectionLink = getLink('dev-test-database', 1)
+    wrappedClient.readDocuments(collectionLink, {maxItemCount: -1}).toArray((err, response, headers, pages) ->
+      if err?
+        console.dir(err)
+        throw new Error("Got error when trying to readDocumentsArray via WrappedClient")
+      test.equal(response.length, docsRemaining)
+      if pages < 2
+        console.log("Didn't have enough docs in the test to cause this test to need more than one round trip. Please either rerun after maybe increasing docsRemaining")
+      test.ok(pages > 1)
+      test.done()
+    )
 
   tearDown: (callback) ->
     f = () ->

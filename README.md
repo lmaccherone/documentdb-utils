@@ -4,9 +4,9 @@ Copyright (c) 2015, Lawrence S. Maccherone, Jr.
 
 _Drop-in replacement + extensions for DocumentDB node.js client with auto-retry on 429 errors plus a lot more_
 
-By functionality like automatic retries on 429 errors among other things, documentdb-utils makes it much easier to use Microsoft Azure DocumentDB from node.js.
+By providing functionality like automatic retries on 429 errors among other things, documentdb-utils makes it much easier to use Microsoft Azure DocumentDB from node.js.
 
-Note, versions prior to 0.4.0 had a very different interface exposed as documentDBUtils. That has now been removed in favor of this drop-in replacement + extensions approach.
+Note, versions prior to 0.4.0 had a very different interface exposed as the function documentDBUtils(). That has now been removed in favor of this drop-in replacement + extensions approach.
 
 
 ## Source code ##
@@ -30,15 +30,15 @@ Note, versions prior to 0.4.0 had a very different interface exposed as document
 
 * `<old-method>Multi(linkArray, ..., callback)` and `<old-method>ArrayMulti(linkArray, ..., callback)` as automatic fan-out to multiple collections, sprocs, etc. for each method whose first parameter is a link. If you want to run the same query against multiple collections or call a sproc by the same name in different collections, you can now do that with one line. The results are automatically aggregated into a single callback response. Example: `executeStoredProcedureMulti(arrayOfCollecitonLinks, 'countDocuments', callback)`.
 
-* Stats on the number of round trips and RU costs used by each operation even when the operation is expanded to many low-level operations.
+* Aggregated stats on the number of round trips and RU costs used by `...Multi()` operations.
 
-* `<old-method>AsyncJSIterator(item, callback)` wrapper of methods to enable use of async.js's higher order functions like map, filter, etc. This is used internally to provide the multi-link capability but you can use it yourself to compose your own.
+* `<old-method>AsyncJSIterator(item, callback)` wrapper of methods to enable use of async.js's higher order functions like map, filter, etc. This is used internally to provide the multi-link capability but you can use it yourself to compose your own. See test code for examples.
 
 ### The kitchen sink ###
 
 * link and link array generator. Example: `getLinkArray('myDB', [1, 2], 'mySproc')` results in `['dbs/myDB/colls/1/sprocs/mySproc', 'dbs/myDB/colls/2/sprocs/mySproc']`
 
-* expandSproc functionality allows you to "require" npm modules from within your stored procedures as well as DRY for utility functions in your sprocs
+* expandScript functionality allows you to "require" npm modules from within your stored procedures as well as DRY for utility functions in your sprocs
 
 * loadSprocs/loadUDFs automatically expands and loads every sproc/UDF in a directory to a list of collections
 
@@ -53,7 +53,6 @@ Note, versions prior to 0.4.0 had a very different interface exposed as document
 * [sql-from-mongo](https://www.npmjs.com/package/sql-from-mongo) exported as sqlFromMongo
 
 * documentdb.Base.generateGuidId exported and aliased as getGUID in addition to generateGuidId
-
 
 
 ## Install ##
@@ -78,34 +77,157 @@ You can also pass in the same parameters as the Azure client (urlConnection, aut
     {WrappedClient} = require('documentdb-utils')
     client = new WrappedClient(urlConnection, auth, connectionPolicy, consistencyLevel)
 
-Alternatively, if you've already created your own instance of the Azure client, you can pass that in as the first parameter.
+Alternatively, if you've already created your own instance of the Azure DocumentClient, you can pass that in as the only parameter. Be sure to set your connectionPolicy, and consistencyLevel on the original client.
 
     {WrappedClient} = require('documentdb-utils')
     {DocumentClient} = require('documentdb')
     _client = new DocumentClient(urlConnection, auth)
     client = new WrappedClient(_client)
+    
+Now, you can use the same methods you would on DocumentClient except they are upgraded to have automatic 429 error delay/retry functionality. Further, there are some methods that are added that make it easier to use DocumentDB especially when you have multiple partitions.
 
 ### A Stored Procedure Example ###
 
 Let's say you wrote this little stored procedure and saved it in hello.coffee.
 
-    exports.hello = () ->
+    module.exports = () ->
       getContext().getResponse().setBody('Hello world!')
       
 or if you prefer JavaScript saved in hello.js.
 
-    exports.hello = function () {
+    module.exports = function () {
       getContext().getResponse().setBody('Hello world!');
     }
    
-Now let's write some CoffeeScript (or equivalent JavaScript) to send and execute this on two different collections:
+Now let's write some CoffeeScript to send and execute this on two different collections:
 
-    TBD
+    hello = require('../sprocs/hello')
+
+    collectionLinks = getLinkArray('db1', ['coll1', 'coll2'])
+    sprocSpec = {id: 'hello', body: hello}
+    wrappedClient.upsertStoredProcedureMulti(collectionLinks, sprocSpec, (err, result, stats) ->
+      sprocLinks = getLinkArray(collectionLinks, 'hello')
+      wrappedClient.executeStoredProcedureMulti(sprocLinks, (err, result, stats) ->
+        console.log(result)  # The output of the executions as an array
+        console.log(stats)  # Cumulative RUs, round trips, and other stats
+      )
+    )
+    
+And in JavaScript:
+
+    var collectionLinks, hello, sprocSpec;
+    
+    hello = require('../sprocs/hello');
+    
+    collectionLinks = getLinkArray('db1', ['coll1', 'coll2']);
+    sprocSpec = {id: 'hello', body: hello};
+    wrappedClient.upsertStoredProcedureMulti(collectionLinks, sprocSpec, function(err, result, stats) {
+      var sprocLinks;
+      sprocLinks = getLinkArray(collectionLinks, 'hello');
+      return wrappedClient.executeStoredProcedureMulti(sprocLinks, function(err, result, stats) {
+        console.log(result);
+        return console.log(stats);
+      });
+    });
+    
+Look in the test directory for more examples including wrapped methods that are tailor-made for use with async.js.
+
+### getLink, getDocLink, getAttachmentLink, and getLinkArray ###
+
+In the example above we used getLinkArray to create an array of two collection links. We then used that in another call to getLinkArray to create an array of two sproc links. However, it can do a lot more than that.
+
+Example                                           | Output
+------------------------------------------------- | ---------------------------------------
+`getLink('myDB')`                                 | `"dbs/myDB"`
+`getLink('I', 'A', 1)`                            | `"dbs/I/colls/A/sprocs/1"`
+`getLink(1, {users: 'myUser'})`                   | `"dbs/1/users/myUser"`
+`collLink = getLink('myDB', 'myColl')`<br>`sprocLink = getLink(collLink, 'mySproc')` | `"dbs/myDB/colls/myColl"`<br>`"dbs/myDB/colls/myColl/sprocs/mySproc"`
+`getDocLink(collLink, 'myDoc')`                   | `"dbs/myDB/colls/myColl/docs/myDoc"`
+`getAttachmentLink('I', 'A', '1', 'myAtt')`       | `"dbs/I/colls/A/docs/1/attachments/myAtt"`
+`getLinkArray(['db1', 'db2'], ['col1', 'col2'])`  | `[`<br>`"dbs/db1/colls/col1"`<br>`"dbs/db1/colls/col2"`<br>`"dbs/db2/colls/col1"`<br>`"dbs/db2/colls/col2"`<br>`]`
+`dbLinks = getLinkArray(['db1', 'db2'])`<br>`collLinks = getLinkArray(dbLinks, 'myColl')` | `[`<br>`"dbs/db1/colls/myColl"`<br>`"dbs/db1/colls/myColl"`<br>`]`
+`getLinkArray(['db1', 'db2'], {users: 'Joe'})`    | `[`<br>`"dbs/db1/users/Joe",`<br>`"dbs/db2/users/Joe"`<br>`]`
+
+I think you get the idea but there are a bunch of other combinations. Note the default for getLink and getLinkArray is dbs/colls/sprocs. The default for getDocLink and getAttachmentsLink is dbs/colls/docs/attachments. You can get multiple document and attachment links by using the `{docs: 'myDoc'}` parameter format in a getLinkArray call.
+
+### Support for require() in server-side scripts ###
+
+Let's say you have this CoffeeScript source code in file `sprocToExpand.coffee`
+
+    module.exports = () ->
+      x = 1
+    
+      mixinToInsert = require('../test-examples/mixinToInsert')
+      mixinToInsert2 = require('../test-examples/mixinToInsert2')
+    
+      y = 2
+    
+This is in `mixinToInsert.coffee`:
+
+    module.exports = () ->
+      return 3
+      
+This is in `mixinToInsert2.coffee`:
+
+    f1 = () ->
+      mixinToInsert3 = require('../test-examples/mixinToInsert3')
+      return 300
+    
+    f2 = (x) ->
+      return x * 2
+    
+    module.exports = {f1, f2}
+    
+And last, this is in `mixinToInsert3.coffee`
+
+    module.exports = () ->
+      return 3000
+
+The expandScript function will take the above and produce:
+
+    function () {
+        var mixinToInsert, mixinToInsert2, x, y;
+        x = 1;
+        mixinToInsert = function () {
+            return 3;
+        };
+    
+        mixinToInsert2 = {
+            f1: function () {
+                var mixinToInsert3, z;
+                mixinToInsert3 = function () {
+                    return 3000;
+                };
+        
+                return 300;
+            },
+            f2: function (x) {
+                return x * 2;
+            }
+        };
+        return y = 2;
+    }
+    
+Two things to keep in mind when trying to use expandScript:
+
+1. The require must be on it's own line and it must be in the form `myVar = require('myPackage')`. You can do stuff with myVar, just make sure it's on a different line.
+2. The mixins can be written in either JavaScript or CoffeeScript but the main file must in CoffeeScript. This is something I could fix, but I didn't have the need personally so I didn't bother. The work around for this problem is to create a small CoffeeScript stub but put the bulk of your code in JavaScript that you `require()` from within your CoffeeScript stub.
   
-Execute with something like: `coffee tryHello.coffee`. You should see `Hello world!` as your output.
+So, it doesn't support the miriad different ways you can specify packages and requires. Many npm packages work out of the box, but others need some cleanup before they'll work. It's just doing string manipulation after all. However, it does give you an oportunity to modularlize your code and use some npm packages in your sprocs and UDFs.
 
-    TBD
 
+### async.js and underscore.js ###
+
+I've included mixins for these popular JavaScript utility packages that you can `require()` and use when writing sprocs. See the test directory for examples. Normally I run lodash instead of underscore but I couldn't get it to work. Maybe next time.
+
+### Example sprocs, UDFs, and mixins ###
+
+I've included a number of example sprocs, UDFs, and mixins that you can use as-is or as starting points for your own.
+
+### Convenient dependencies exposed in the package ###
+
+I use `lodash` (exposed as `_`), `async`, `sqlFromMongo`, and `generateGuidId` (aliased also as `getGUID`) in my own code all the time and they are dependencies of documentdb-utils so I've exported them for your convenience. It will save you the effort of `npm install`ing them and help avoid having multiple versions of the same depencies in your project.
+    
 ## Pattern for writing stored procedures ##
 
 **The key to a general pattern for writing restartable stored procedures is to write them as if you were writing a reduce() function.**
@@ -177,8 +299,9 @@ Here is an example of a stored procedure that counts all the documents in a coll
 
 ## Changelog ##
 
+* 0.5.0 - 2015-12-08 - **WARNING - Slightly backward breaking on API for loadScripts** Updated docs
 * 0.4.6 - 2015-12-07 - Added async.js and underscore.js as mixins for sprocs
-* 0.4.5 - 2015-12-07 - expandSource now works with primatives
+* 0.4.5 - 2015-12-07 - expandScript now works with primatives
 * 0.4.4 - 2015-12-07 - Fix for udfs not being compiled, however, loadSprocs/loadUDFs still won't work with .js files
 * 0.4.3 - 2015-12-07 - Added loadUDFs and refactored loadSprocs
 * 0.4.2 - 2015-12-06 - Various cleanup

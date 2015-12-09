@@ -12,8 +12,8 @@ module.exports =
   getDocLink: link.getDocLink
   getAttachmentLink: link.getAttachmentLink
   getLinkArray: link.getLinkArray
+  expandScript: require(path.join(__dirname, 'src', 'expandScript'))
   loadSprocs: loadScripts.loadSprocs
-  expandSource: require(path.join(__dirname, 'src', 'expandSource'))
   loadUDFs: loadScripts.loadUDFs
   _: require('lodash')
   async: require('async')

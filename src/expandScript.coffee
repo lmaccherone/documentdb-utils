@@ -59,10 +59,10 @@ insertMixins = (source, minify = false) ->
         else if _.isString(value) or _.isBoolean(value) or _.isNull(value) or _.isNumber(value)
           stringsToInsert.push(indent(key + ": " + JSON.stringify(value), spacesToIndent + 2))
         else
-          throw new Error("#{typeof(value)} is not a supported type for expandSource")
+          throw new Error("#{typeof(value)} is not a supported type for expandScript")
       functionToInsertString += stringsToInsert.join(',\n') + '\n' + indent('};', spacesToIndent)
     else
-      throw new Error("#{typeof(functionToInsert)} is not a supported type for expandSource")
+      throw new Error("#{typeof(functionToInsert)} is not a supported type for expandScript")
 
     sourceLines[i] = functionToInsertString
     sourceString = sourceLines.join('\n')

@@ -24,16 +24,16 @@ exports.asyncJSTest =
           collectionLinks = getLinkArray(['dev-test-database'], [1])
           async.parallel([
             (callback) ->
-              sourceDirectory = path.join(__dirname, '..', 'udfs')
-              udfSpec = {sourceDirectory, client, collectionLinks}
+              scriptsDirectory = path.join(__dirname, '..', 'udfs')
+              udfSpec = {scriptsDirectory, client, collectionLinks}
               loadUDFs(udfSpec, (err, result) ->
                 sprocLink = getLink(collectionLinks[0], 'createVariedDocuments')
                 console.log("UDFs loaded for test")
                 callback(err, result)
               )
             , (callback) ->
-              sourceDirectory = path.join(__dirname, '..', 'sprocs')
-              spec = {sourceDirectory, client, collectionLinks}
+              scriptsDirectory = path.join(__dirname, '..', 'sprocs')
+              spec = {scriptsDirectory, client, collectionLinks}
               loadSprocs(spec, (err, result) ->
                 console.log("sprocs loaded for test")
                 sprocLink = getLink(collectionLinks[0], 'createVariedDocuments')

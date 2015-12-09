@@ -1,9 +1,9 @@
 path = require('path')
-expandSource = require(path.join(__dirname, '..', 'src', 'expandSource'))
+expandScript = require(path.join(__dirname, '..', 'src', 'expandScript'))
 
-exports.expandSourceTest =
+exports.expandScriptTest =
 
-  expandsourceTest: (test) ->
+  expandScriptTest: (test) ->
 
     expected = '''
       function () {
@@ -35,7 +35,7 @@ exports.expandSourceTest =
         }
     '''
 
-    result = expandSource(path.join('..', 'test-examples', 'sprocToExpand'))
+    result = expandScript(path.join('..', 'test-examples', 'sprocToExpand'))
     test.equal(result.body, expected)
     test.equal(result.id, 'sprocToExpand')
 
@@ -62,7 +62,7 @@ exports.expandSourceTest =
         }
     '''
 
-    result = expandSource(path.join('..', 'test-examples', 'primativeToExpand'))
+    result = expandScript(path.join('..', 'test-examples', 'primativeToExpand'))
     test.equal(result.body, expected)
     test.equal(result.id, 'primativeToExpand')
 

@@ -27,8 +27,8 @@ exports.multiTest =
         ]
         async.map(parametersArray, wrappedClient.createCollectionAsyncJSIterator, (err, result) ->
           collectionLinks = getLinkArray(['dev-test-database'], [1, 2])
-          sprocDirectory = path.join(__dirname, '..', 'sprocs')
-          spec = {sprocDirectory, client, collectionLinks}
+          scriptsDirectory = path.join(__dirname, '..', 'sprocs')
+          spec = {scriptsDirectory, client, collectionLinks}
           loadSprocs(spec, (err, result) ->
             if err?
               console.dir(err)
@@ -43,6 +43,15 @@ exports.multiTest =
           )
         )
       )
+    )
+
+  multiUpsertStoredProcedureTest: (test) ->
+    collectionLinks = getLinkArray(['dev-test-database'], [1, 2])
+    hello = () -> getContext().getResponse().setBody('Hello world!')
+    wrappedClient.upsertStoredProcedureMulti(collectionLinks, {id: 'hello', body: hello}, (err, result, stats) ->
+      test.equal(result.length, 2)
+      test.ok(stats.requestUnitCharges?)
+      test.done()
     )
 
   multiStoredProcedureTest: (test) ->

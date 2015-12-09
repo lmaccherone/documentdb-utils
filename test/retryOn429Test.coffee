@@ -36,8 +36,8 @@ exports.retryOn429Test =
         databaseLink = response._self
         client.createCollection(databaseLink, {id: '1'}, {offerType: 'S2'}, (err, response, headers) ->
           collectionLinks = getLinkArray(['dev-test-database'], [1])
-          sprocDirectory = path.join(__dirname, '..', 'sprocs')
-          spec = {sprocDirectory, client, collectionLinks}
+          scriptsDirectory = path.join(__dirname, '..', 'sprocs')
+          spec = {scriptsDirectory, client, collectionLinks}
           loadSprocs(spec, (err, result) ->
             if err?
               console.dir(err)

@@ -21,8 +21,8 @@ exports.underscoreTest =
         databaseLink = response._self
         client.createCollection(databaseLink, {id: '1'}, {offerType: 'S2'}, (err, response, headers) ->
           collectionLinks = getLinkArray(['dev-test-database'], [1])
-          sourceDirectory = path.join(__dirname, '..', 'sprocs')
-          spec = {sourceDirectory, client, collectionLinks}
+          scriptsDirectory = path.join(__dirname, '..', 'sprocs')
+          spec = {scriptsDirectory, client, collectionLinks}
           loadSprocs(spec, (err, result) ->
             sprocLink = getLink(collectionLinks[0], 'createVariedDocuments')
             console.log("sprocs loaded for test")

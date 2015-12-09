@@ -22,11 +22,11 @@ Note, versions prior to 0.4.0 had a very different interface exposed as the func
 
 * Automatically handles 429 throttling responses by retrying after the delay specified by the prior operation.
 
-* Automatically deals with early termination of stored procedures for exceeding resources. Just follow a simple pattern (memoization like that used in a reduce function) for writing your stored procedures. The state will be shipped back to the calling side and the stored procedure will be called again picking back up right where it left off.
+* Sproc execution continuation. Automatically deals with early termination of stored procedures for exceeding resources. Just follow a simple pattern (memoization like that used in a reduce function) for writing your stored procedures. The state will be shipped back to the calling side and the stored procedure will be called again picking back up right where it left off. I want to upgrade this to serialize a sproc execution continuation in a document or attachment so we don't have to ship the state  back and forth. The state for a call to documentdb-lumenize/cube can get pretty large.
 
 ### Extended functionality ###
 
-* `<old-method>Array(..., callback)` as short-hand for `.toArray()` calls. Example:  `readDocumentsArray(collectionLink, callback)`
+* `<old-method>Array(..., callback)` as short-hand for `.toArray()` calls. Example:  `readDocumentsArray(collectionLink, callback)`. This alone makes it easier to use higher order async functions, but I'm not done yet.
 
 * `<old-method>Multi(linkArray, ..., callback)` and `<old-method>ArrayMulti(linkArray, ..., callback)` as automatic fan-out to multiple collections, sprocs, etc. for each method whose first parameter is a link. If you want to run the same query against multiple collections or call a sproc by the same name in different collections, you can now do that with one line. The results are automatically aggregated into a single callback response. Example: `executeStoredProcedureMulti(arrayOfCollecitonLinks, 'countDocuments', callback)`.
 
@@ -144,11 +144,11 @@ Example                                           | Output
 `collLink = getLink('myDB', 'myColl')`<br>`sprocLink = getLink(collLink, 'mySproc')` | `"dbs/myDB/colls/myColl"`<br>`"dbs/myDB/colls/myColl/sprocs/mySproc"`
 `getDocLink(collLink, 'myDoc')`                   | `"dbs/myDB/colls/myColl/docs/myDoc"`
 `getAttachmentLink('I', 'A', '1', 'myAtt')`       | `"dbs/I/colls/A/docs/1/attachments/myAtt"`
-`getLinkArray(['db1', 'db2'], ['col1', 'col2'])`  | `[`<br>`"dbs/db1/colls/col1"`<br>`"dbs/db1/colls/col2"`<br>`"dbs/db2/colls/col1"`<br>`"dbs/db2/colls/col2"`<br>`]`
-`dbLinks = getLinkArray(['db1', 'db2'])`<br>`collLinks = getLinkArray(dbLinks, 'myColl')` | `[`<br>`"dbs/db1/colls/myColl"`<br>`"dbs/db1/colls/myColl"`<br>`]`
+`getLinkArray(['db1', 'db2'], ['col1', 'col2'])`  | `[`<br>`"dbs/db1/colls/col1",`<br>`"dbs/db1/colls/col2",`<br>`"dbs/db2/colls/col1",`<br>`"dbs/db2/colls/col2"`<br>`]`
+`dbLinks = getLinkArray(['db1', 'db2'])`<br>`collLinks = getLinkArray(dbLinks, 'myColl')` | `[`<br>`"dbs/db1/colls/myColl",`<br>`"dbs/db1/colls/myColl"`<br>`]`
 `getLinkArray(['db1', 'db2'], {users: 'Joe'})`    | `[`<br>`"dbs/db1/users/Joe",`<br>`"dbs/db2/users/Joe"`<br>`]`
 
-I think you get the idea but there are a bunch of other combinations. Note the default for getLink and getLinkArray is dbs/colls/sprocs. The default for getDocLink and getAttachmentsLink is dbs/colls/docs/attachments. You can get multiple document and attachment links by using the `{docs: 'myDoc'}` parameter format in a getLinkArray call.
+I think you get the idea but there are a bunch of other combinations. Note the default for getLink and getLinkArray is dbs/colls/sprocs. The default for getDocLink and getAttachmentsLink is dbs/colls/docs/attachments. You can get multiple document and attachment links by using the `{docs: 'myDoc'}` parameter format in a getLinkArray call but I use GUIDs almost all the time so I never have the same id in multiple collections.
 
 ### Support for require() in server-side scripts ###
 
@@ -194,7 +194,7 @@ The expandScript function will take the above and produce:
     
         mixinToInsert2 = {
             f1: function () {
-                var mixinToInsert3, z;
+                var mixinToInsert3;
                 mixinToInsert3 = function () {
                     return 3000;
                 };
@@ -215,19 +215,18 @@ Two things to keep in mind when trying to use expandScript:
   
 So, it doesn't support the miriad different ways you can specify packages and requires. Many npm packages work out of the box, but others need some cleanup before they'll work. It's just doing string manipulation after all. However, it does give you an oportunity to modularlize your code and use some npm packages in your sprocs and UDFs.
 
+### Using async.js and underscore.js inside of sprocs ###
 
-### async.js and underscore.js ###
-
-I've included mixins for these popular JavaScript utility packages that you can `require()` and use when writing sprocs. See the test directory for examples. Normally I run lodash instead of underscore but I couldn't get it to work. Maybe next time.
-
-### Example sprocs, UDFs, and mixins ###
-
-I've included a number of example sprocs, UDFs, and mixins that you can use as-is or as starting points for your own.
+I've included mixins for these popular JavaScript utility packages that you can `require()` and use when writing sprocs. See the test directory for examples. Normally I run lodash instead of underscore but I couldn't get it to run in a sproc after a bit of trying. Maybe next time.
 
 ### Convenient dependencies exposed in the package ###
 
 I use `lodash` (exposed as `_`), `async`, `sqlFromMongo`, and `generateGuidId` (aliased also as `getGUID`) in my own code all the time and they are dependencies of documentdb-utils so I've exported them for your convenience. It will save you the effort of `npm install`ing them and help avoid having multiple versions of the same depencies in your project.
     
+### Example sprocs, UDFs, and mixins ###
+
+I've included a number of example sprocs, UDFs, and mixins that you can use as-is or as starting points for your own. See the next section down for tips on writing sprocs that work well with the continuation functionality of WrappedClient.executeStoredProcedure.
+
 ## Pattern for writing stored procedures ##
 
 **The key to a general pattern for writing restartable stored procedures is to write them as if you were writing a reduce() function.**
@@ -299,6 +298,7 @@ Here is an example of a stored procedure that counts all the documents in a coll
 
 ## Changelog ##
 
+* 0.5.1 - 2015-12-09 - Documentation edits
 * 0.5.0 - 2015-12-08 - **WARNING - Slightly backward breaking on API for loadScripts** Updated docs
 * 0.4.6 - 2015-12-07 - Added async.js and underscore.js as mixins for sprocs
 * 0.4.5 - 2015-12-07 - expandScript now works with primatives

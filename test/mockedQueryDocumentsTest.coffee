@@ -21,16 +21,16 @@ exports.mockedQueryDocumentsTest =
     options = {maxItemCount: 1000}
 
     mock.nextResources = _.cloneDeep(nextResources)
-    exampleHeaders = {'x-ms-retry-after-ms': '300'}
-    mock.nextHeaders = exampleHeaders
+    nonRetryHeaders = {'x-ms-request-charge': 1000}
+    retryHeaders = {'x-ms-retry-after-ms': '30', 'x-ms-request-charge': 100}
+    mock.nextHeaders = nonRetryHeaders
 
     iterator = client.queryDocuments(collectionLink, query, options)
 
     iterator.executeNext((err, result, headers) ->
 
       test.deepEqual(result, nextResources)
-      test.deepEqual(headers, exampleHeaders)
-      test.equal(iterator.hasMoreResults(), false)
+      test.deepEqual(headers, nonRetryHeaders)
 
       test.equal(mock.lastEntityLink, collectionLink)
       test.equal(mock.lastQueryFilter, query)
@@ -87,33 +87,71 @@ exports.mockedQueryDocumentsTest =
       )
     )
 
-#  arrayError429Test: (test) ->
-#    firstBatch = [
-#      {id: 1, value: 10}
-#      {id: 2, value: 20}
-#    ]
-#    secondBatch = [
-#      {id: 3, value: 30}
-#      {id: 4, value: 40}
-#    ]
-#    mock.resourcesList = [null, firstBatch, secondBatch]
-#    error429 = {code: 429, body: "429 Error"}
-#    mock.errorList = [error429, null, null]
-#
-#    collectionLink = 'dbs/A/colls/1'
-#    query = "SELECT * FROM c"
-#    options = {maxItemCount: 2}
-#
-#    iterator = client.queryDocumentsArray(collectionLink, query, options, (err, result, stats) ->
-#      if err?
-#        console.dir(err)
-#        throw new Error("Got unexpected error during error429Test")
-#
-#      console.dir(result)
-#      console.dir(stats)
-#
-#      test.done()
-#    )
+  error429OutOfRetriesTest: (test) ->
+    error429 = {code: 429, body: "429 Error"}
+    mock.errorList = [error429, error429, error429, error429]
+
+    collectionLink = 'dbs/A/colls/1'
+    query = "SELECT * FROM c"
+    options = {maxItemCount: 2}
+
+    iterator = client.queryDocuments(collectionLink, query, options)
+
+    iterator.executeNext((err, result, headers, retries) ->
+      test.deepEqual(err, error429)
+      test.done()
+    )
+
+  error429UnderRetryLimitTest: (test) ->
+    error429 = {code: 429, body: "429 Error"}
+    mock.errorList = [error429, error429, error429, null]
+
+    collectionLink = 'dbs/A/colls/1'
+    query = "SELECT * FROM c"
+    options = {maxItemCount: 2}
+
+    iterator = client.queryDocuments(collectionLink, query, options)
+
+    iterator.executeNext((err, result, headers, retries) ->
+      test.equal(err, null)
+      test.done()
+    )
+
+  arrayError429Test: (test) ->
+    firstBatch = [
+      {id: 1, value: 10}
+      {id: 2, value: 20}
+    ]
+    secondBatch = [
+      {id: 3, value: 30}
+      {id: 4, value: 40}
+    ]
+    mock.resourcesList = [null, firstBatch, secondBatch]
+    error429 = {code: 429, body: "429 Error"}
+    mock.errorList = [error429, null, null]
+    nonRetryHeaders = {'x-ms-request-charge': 1000}
+    retryHeaders = {'x-ms-retry-after-ms': '10', 'x-ms-request-charge': 100}
+    mock.headersList = [retryHeaders, nonRetryHeaders, nonRetryHeaders]
+
+    collectionLink = 'dbs/A/colls/1'
+    query = "SELECT * FROM c"
+    options = {maxItemCount: 2}
+
+    iterator = client.queryDocumentsArray(collectionLink, query, options, (err, result, stats) ->
+      if err?
+        console.dir(err)
+        throw new Error("Got unexpected error during error429Test")
+
+      test.deepEqual(result, firstBatch.concat(secondBatch))
+
+      test.equal(stats.roundTripCount, 2)
+      test.equal(stats.retries, 1)
+      test.equal(stats.requestUnitCharges, 2000)
+      test.equal(stats.totalDelay, 10)
+      test.ok(stats.totalTime >= stats.totalDelay)
+
+      test.done()
+    )
 
 #  testContinuation: (test) ->
 #    firstBatch = [

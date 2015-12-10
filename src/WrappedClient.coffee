@@ -6,41 +6,43 @@ delay = (ms, func) ->
   setTimeout(func, ms)
 
 WrappedQueryIterator = class
-  constructor: (@_iterator, @defaultRetries) ->
+  constructor: (@_iterator, retriesAllowed) ->
     for methodName, _method of @_iterator
       if methodName in ['executeNext', 'forEach', 'nextItem']
-        this[methodName] = wrapCallbackMethod(@_iterator, _method, @defaultRetries)
+        this[methodName] = wrapCallbackMethod(@_iterator, _method, retriesAllowed)
       else if methodName is 'toArray'
         this[methodName] = wrapToArray(this)
       else
         this[methodName] = wrapSimpleMethod(@_iterator, _method)
 
-wrapQueryIteratorMethod = (_client, _method, defaultRetries) ->
+wrapQueryIteratorMethod = (_client, _method, retriesAllowed) ->
   f = (parameters...) ->
     _iterator = _method.call(_client, parameters...)
-    return new WrappedQueryIterator(_iterator, defaultRetries)
+    return new WrappedQueryIterator(_iterator, retriesAllowed)
   return f
 
-wrapQueryIteratorMethodForArray = (_client, _method, defaultRetries) ->
+wrapQueryIteratorMethodForArray = (_client, _method, retriesAllowed) ->
   f = (parameters...) ->
     callback = parameters.pop()
     _iterator = _method.call(_client, parameters...)
-    iterator = new WrappedQueryIterator(_iterator, defaultRetries)
+    iterator = new WrappedQueryIterator(_iterator, retriesAllowed)
     return iterator.toArray(callback)
   return f
 
 wrapToArray = (iterator) ->
   f = (callback) ->
     all = []
-    stats = {roundTripCount: 0, retries: 0, requestUnitCharges: 0}
+    stats = {roundTripCount: 0, retries: 0, requestUnitCharges: 0, totalDelay: 0, totalTime: 0}
     innerF = () ->
-      iterator.executeNext((err, response, headers, retries) ->
+      iterator.executeNext((err, response, headers, retries, totalDelay, totalTime) ->
         if err?
           callback(err, response, headers, retries)
         else
           stats.roundTripCount++
           stats.retries += retries
           stats.requestUnitCharges += Number(headers['x-ms-request-charge']) or 0
+          stats.totalDelay += totalDelay
+          stats.totalTime += totalTime
           all = all.concat(response)
           if iterator.hasMoreResults()
             innerF()
@@ -89,40 +91,43 @@ wrapMultiMethod = (that, asyncJSIterator) ->
     )
   return f
 
-wrapCallbackMethod = (that, _method, defaultRetries) ->
+wrapCallbackMethod = (that, _method, retriesAllowed) ->
   f = (parameters...) ->
+    startTime = new Date()
     retries = 0
+    totalDelay = 0
     callback = parameters.pop()
-    innerF = (retriesLeft = defaultRetries, parameters...) ->
+    innerF = (parameters...) ->
       return _method.call(that, parameters..., (err, response, headers) ->
         if err?
-          if err.code in [429, 449] and retriesLeft > 0
-            retryAfter = headers['x-ms-retry-after-ms'] or 1
+          if err.code in [429, 449] and retries <= retriesAllowed
+            retryAfter = headers['x-ms-retry-after-ms'] or 0
             retryAfter = Number(retryAfter)
             retries++
+            totalDelay += retryAfter
             delay(retryAfter, () ->
-              innerF(retriesLeft - 1, parameters...)
+              innerF(parameters...)
             )
             return
           else
-            callback(err, response, headers, retries)
+            callback(err, response, headers, retries, totalDelay, new Date() - startTime)
         else
-          callback(err, response, headers, retries)
+          callback(err, response, headers, retries, totalDelay, new Date() - startTime)
       )
-    return innerF(null, parameters...)
+    return innerF(parameters...)
   return f
 
-wrapExecuteStoredProcedure = (_client, _method, defaultRetries) ->
+wrapExecuteStoredProcedure = (_client, _method, retriesAllowed) ->  # TODO: This has gotten way behind wrapCallbackMethod in terms of retriesAllowed logic, retries count maintain, request charges, cumulative delay
   f = (parameters...) ->
     callback = parameters.pop()
-    innerF = (retriesLeft = defaultRetries, parameters...) ->
+    innerF = (parameters...) ->
       return _method.call(_client, parameters..., (err, response, headers) ->
         if err?
-          if err.code in [429, 449] and retriesLeft > 0
-            retryAfter = headers['x-ms-retry-after-ms'] or 1
+          if err.code in [429, 449] and retries <= retriesAllowed
+            retryAfter = headers['x-ms-retry-after-ms'] or 0
             retryAfter = Number(retryAfter)
             delay(retryAfter, () ->
-              innerF(retriesLeft - 1, parameters...)
+              innerF(parameters...)
             )
             return
           else
@@ -134,7 +139,7 @@ wrapExecuteStoredProcedure = (_client, _method, defaultRetries) ->
           else
             callback(err, response, headers)
       )
-    return innerF(null, parameters...)
+    return innerF(retriesAllowed, parameters...)
   return f
 
 module.exports = class WrappedClient
@@ -147,7 +152,7 @@ module.exports = class WrappedClient
       @auth = @auth or {masterKey}
       @_client = new DocumentClient(@urlConnection, @auth, @connectionPolicy, @consistencyLevel)
 
-    @defaultRetries = 3
+    @retriesAllowed = 3
     for methodName, _method of @_client
       if typeof _method isnt 'function'
         continue
@@ -164,12 +169,12 @@ module.exports = class WrappedClient
       lastParameterIsCallback = parameterList[parameterList.length - 1] is 'callback'
 
       if methodName is 'executeStoredProcedure'
-        this[methodName] = wrapExecuteStoredProcedure(@_client, _method, @defaultRetries)
+        this[methodName] = wrapExecuteStoredProcedure(@_client, _method, @retriesAllowed)
       else if lastParameterIsCallback
-        this[methodName] = wrapCallbackMethod(@_client, _method, @defaultRetries)
+        this[methodName] = wrapCallbackMethod(@_client, _method, @retriesAllowed)
       else if hasArrayVersion
-        this[methodName] = wrapQueryIteratorMethod(@_client, _method, @defaultRetries)
-        this[methodName + 'Array'] = wrapQueryIteratorMethodForArray(@_client, _method, @defaultRetries)  # TODO: Maybe we should replace _method with this[methodName]. Need tests to confirm.
+        this[methodName] = wrapQueryIteratorMethod(@_client, _method, @retriesAllowed)
+        this[methodName + 'Array'] = wrapQueryIteratorMethodForArray(@_client, _method, @retriesAllowed)  # TODO: Maybe we should replace _method with this[methodName]. Need tests to confirm.
 
       else  # When I checked, these were all functions that had neither callbacks nor returned QueryIterator. They appear to be utility functions.
         # do nothing

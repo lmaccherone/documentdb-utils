@@ -55,11 +55,12 @@ exports.asyncJSTest =
 
   arrayTest: (test) ->
     collectionLink = getLink('dev-test-database', 1)
-    wrappedClient.readDocumentsArrayAsyncJSIterator([collectionLink, {maxItemCount: 4}], (err, result, stats) ->
+    wrappedClient.readDocumentsArrayAsyncJSIterator([collectionLink, {maxItemCount: 4}], (err, result) ->
       if err?
         console.dir(err)
         throw new Error("Got error when trying to readDocumentsArray via WrappedClient")
-      test.equal(result.length, docsRemaining)
+      {all, stats} = result
+      test.equal(all.length, docsRemaining)
       test.equal(stats.roundTripCount, 3)
       test.equal(stats.retries, 0)
       test.equal(stats.totalDelay, 0)

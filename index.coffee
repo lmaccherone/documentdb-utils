@@ -1,4 +1,3 @@
-# TODO: Add all the other functions to index.coffee
 path = require('path')
 
 documentdb = require('documentdb')

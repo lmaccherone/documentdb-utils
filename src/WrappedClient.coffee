@@ -32,18 +32,20 @@ wrapQueryIteratorMethodForArray = (_client, _method, defaultRetries) ->
 wrapToArray = (iterator) ->
   f = (callback) ->
     all = []
-    pages = 0
+    stats = {roundTripCount: 0, retries: 0, requestUnitCharges: 0}
     innerF = () ->
       iterator.executeNext((err, response, headers, retries) ->
         if err?
-          callback(err, response, headers, pages)
+          callback(err, response, headers, retries)
         else
-          pages++
+          stats.roundTripCount++
+          stats.retries += retries
+          stats.requestUnitCharges += Number(headers['x-ms-request-charge']) or 0
           all = all.concat(response)
           if iterator.hasMoreResults()
             innerF()
           else
-            callback(err, all, headers, pages)
+            callback(err, all, stats)
       )
     return innerF()
   return f
@@ -88,8 +90,8 @@ wrapMultiMethod = (that, asyncJSIterator) ->
   return f
 
 wrapCallbackMethod = (that, _method, defaultRetries) ->
-  retries = 0
   f = (parameters...) ->
+    retries = 0
     callback = parameters.pop()
     innerF = (retriesLeft = defaultRetries, parameters...) ->
       return _method.call(that, parameters..., (err, response, headers) ->
@@ -137,7 +139,7 @@ wrapExecuteStoredProcedure = (_client, _method, defaultRetries) ->
 
 module.exports = class WrappedClient
   constructor: (@urlConnection, @auth, @connectionPolicy, @consistencyLevel) ->
-    if @urlConnection instanceof DocumentClient
+    if @urlConnection?.readDocuments? and @urlConnection?.queryDocuments?
       @_client = @urlConnection
     else
       @urlConnection = @urlConnection or process.env.DOCUMENT_DB_URL
@@ -167,7 +169,7 @@ module.exports = class WrappedClient
         this[methodName] = wrapCallbackMethod(@_client, _method, @defaultRetries)
       else if hasArrayVersion
         this[methodName] = wrapQueryIteratorMethod(@_client, _method, @defaultRetries)
-        this[methodName + 'Array'] = wrapQueryIteratorMethodForArray(@_client, _method, @defaultRetries)
+        this[methodName + 'Array'] = wrapQueryIteratorMethodForArray(@_client, _method, @defaultRetries)  # TODO: Maybe we should replace _method with this[methodName]. Need tests to confirm.
 
       else  # When I checked, these were all functions that had neither callbacks nor returned QueryIterator. They appear to be utility functions.
         # do nothing

@@ -1,6 +1,6 @@
-DocumentDBMock = require('documentdb-mock')
+{ServerSideMock} = require('documentdb-mock')
 path = require('path')
-mock = new DocumentDBMock(path.join(__dirname, '..', 'sprocs', 'deleteSomeDocuments'))
+mock = new ServerSideMock(path.join(__dirname, '..', 'sprocs', 'deleteSomeDocuments'))
 
 exports.deleteSomeDocuments =
 

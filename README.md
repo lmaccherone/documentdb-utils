@@ -298,7 +298,7 @@ Here is an example of a stored procedure that counts all the documents in a coll
 
 ## Changelog ##
 
-* 0.5.2 - 2015-12-09 - Upgraded stats and bug fixes for WrappedClient
+* 0.6.0 - 2015-12-10 - **WARNING - Slightly backward breaking because it adds parameters to callbacks. Shouldn't effect drop-in replacement of DocumentClient** Upgraded stats and bug fixes for WrappedClient
 * 0.5.1 - 2015-12-09 - Documentation edits
 * 0.5.0 - 2015-12-08 - **WARNING - Slightly backward breaking on API for loadScripts** Updated docs
 * 0.4.6 - 2015-12-07 - Added async.js and underscore.js as mixins for sprocs

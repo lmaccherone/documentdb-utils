@@ -41,14 +41,14 @@ wrapToArray = (iterator) ->
     stats = {roundTripCount: 0, retries: 0, requestUnitCharges: 0, totalDelay: 0, totalTime: 0}
     innerF = () ->
       iterator.executeNext((err, response, headers, roundTripCount, retries, totalDelay, totalTime) ->
+        stats.roundTripCount++
+        stats.retries += retries
+        stats.requestUnitCharges += Number(headers['x-ms-request-charge']) or 0
+        stats.totalDelay += totalDelay
+        stats.totalTime += totalTime
         if err?
-          callback(err, response, headers, retries)
+          callback(err, all, stats)
         else
-          stats.roundTripCount++
-          stats.retries += retries
-          stats.requestUnitCharges += Number(headers['x-ms-request-charge']) or 0
-          stats.totalDelay += totalDelay
-          stats.totalTime += totalTime
           all = all.concat(response)
           if iterator.hasMoreResults()
             innerF()
@@ -73,7 +73,7 @@ wrapToCreateAsyncJSIterator = (that, _method) ->
 wrapToCreateArrayAsyncJSIterator = (that, _method) ->
   f = (item, callback) ->
     return _method.call(that, item..., (err, all, stats) ->
-      callback(err, all, stats)
+      callback(err, {all, stats})
     )
   return f
 
@@ -110,6 +110,23 @@ wrapMultiMethod = (that, asyncJSIterator) ->
       for result in results
         accumulatedResults = reduceResults(accumulatedResults, result)
       callback(err, accumulatedResults)
+    )
+  return f
+
+wrapArrayMultiMethod = (that, asyncJSIterator) ->
+  f = (parameters...) ->
+    callback = parameters.pop()
+    linkArray = parameters.shift()
+    unless _.isArray(linkArray)
+      linkArray = [linkArray]
+    items = ([link].concat(parameters) for link in linkArray)
+    return async.map(items, asyncJSIterator, (err, results) ->
+      all = []
+      accumulatedStats = {}
+      for result in results
+        all = all.concat(result.all)
+        accumulatedStats = reduceResults(accumulatedStats, result.stats)
+      callback(err, {all, stats: accumulatedStats})
     )
   return f
 
@@ -214,10 +231,12 @@ module.exports = class WrappedClient
         if hasArrayVersion
           methodNameToWrap = methodName + 'Array'
           asyncJSMethod = wrapToCreateArrayAsyncJSIterator(this, this[methodNameToWrap])
+          multiMethod = wrapArrayMultiMethod(this, asyncJSMethod)
         else
           methodNameToWrap = methodName
           asyncJSMethod = wrapToCreateAsyncJSIterator(this, this[methodNameToWrap])
+          multiMethod = wrapMultiMethod(this, asyncJSMethod)
         this[methodNameToWrap + 'AsyncJSIterator'] = asyncJSMethod
-        this[methodNameToWrap + 'Multi'] = wrapMultiMethod(this, asyncJSMethod)
+        this[methodNameToWrap + 'Multi'] = multiMethod
 
 

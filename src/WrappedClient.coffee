@@ -5,6 +5,12 @@ async = require('async')
 delay = (ms, func) ->
   setTimeout(func, ms)
 
+RETRY_ERROR_CODES = [429, 449, 503]
+MAC_SIGNATURE_STRING = "The MAC signature found"
+
+isRetryError = (err) ->
+ return err.code in RETRY_ERROR_CODES or (err.code is 401 and err.body.indexOf(MAC_SIGNATURE_STRING) >= 0)
+
 WrappedQueryIterator = class
   constructor: (@_iterator, retriesAllowed) ->
     for methodName, _method of @_iterator
@@ -34,7 +40,7 @@ wrapToArray = (iterator) ->
     all = []
     stats = {roundTripCount: 0, retries: 0, requestUnitCharges: 0, totalDelay: 0, totalTime: 0}
     innerF = () ->
-      iterator.executeNext((err, response, headers, retries, totalDelay, totalTime) ->
+      iterator.executeNext((err, response, headers, roundTripCount, retries, totalDelay, totalTime) ->
         if err?
           callback(err, response, headers, retries)
         else
@@ -59,10 +65,38 @@ wrapSimpleMethod = (that, _method) ->
 
 wrapToCreateAsyncJSIterator = (that, _method) ->
   f = (item, callback) ->
-    return _method.call(that, item..., (err, response, headers, other) ->
-      callback(err, {response, headers, other})
+    return _method.call(that, item..., (err, response, headers, roundTripCount, retries, totalDelay, totalTime) ->
+      callback(err, {response, headers, roundTripCount, retries, totalDelay, totalTime})
     )
   return f
+
+wrapToCreateArrayAsyncJSIterator = (that, _method) ->
+  f = (item, callback) ->
+    return _method.call(that, item..., (err, all, stats) ->
+      callback(err, all, stats)
+    )
+  return f
+
+reduceResults = (memo, result) ->
+  unless memo?
+    memo = {}
+  for key, value of result
+    if _.isArray(value)
+      if memo[key]?
+        memo[key] = memo[key].concat(value)
+      else
+        memo[key] = value
+    else if _.isNumber(value)
+      if memo[key]?
+        memo[key] += value
+      else
+        memo[key] = value
+    else if _.isPlainObject(value)
+      if memo[key]?
+        memo[key].push(value)
+      else
+        memo[key] = [value]
+  return memo
 
 wrapMultiMethod = (that, asyncJSIterator) ->
   f = (parameters...) ->
@@ -72,35 +106,25 @@ wrapMultiMethod = (that, asyncJSIterator) ->
       linkArray = [linkArray]
     items = ([link].concat(parameters) for link in linkArray)
     return async.map(items, asyncJSIterator, (err, results) ->
-      concatenatedResults = []
-      stats = {roundTripCount: 0, itemCount: 0, requestUnitCharges: 0}
+      accumulatedResults = {}
       for result in results
-        if _.isArray(result.response)
-          concatenatedResults = concatenatedResults.concat(result.response)
-        else
-          concatenatedResults.push(result.response)
-        headers = result.headers
-        stats.roundTripCount += result.other
-        stats.itemCount += Number(headers['x-ms-item-count'])
-        stats.requestUnitCharges += Number(headers['x-ms-request-charge'])
-      if _.isNaN(stats.roundTripCount)
-        delete stats.roundTripCount
-      if _.isNaN(stats.itemCount)
-        delete stats.itemCount
-      callback(err, concatenatedResults, stats)
+        accumulatedResults = reduceResults(accumulatedResults, result)
+      callback(err, accumulatedResults)
     )
   return f
 
 wrapCallbackMethod = (that, _method, retriesAllowed) ->
   f = (parameters...) ->
     startTime = new Date()
+    roundTripCount = 0
     retries = 0
     totalDelay = 0
     callback = parameters.pop()
     innerF = (parameters...) ->
       return _method.call(that, parameters..., (err, response, headers) ->
+        roundTripCount++
         if err?
-          if err.code in [429, 449] and retries <= retriesAllowed
+          if isRetryError(err) and retries <= retriesAllowed
             retryAfter = headers['x-ms-retry-after-ms'] or 0
             retryAfter = Number(retryAfter)
             retries++
@@ -110,36 +134,43 @@ wrapCallbackMethod = (that, _method, retriesAllowed) ->
             )
             return
           else
-            callback(err, response, headers, retries, totalDelay, new Date() - startTime)
+            callback(err, response, headers, roundTripCount, retries, totalDelay, new Date() - startTime)
         else
-          callback(err, response, headers, retries, totalDelay, new Date() - startTime)
+          callback(err, response, headers, roundTripCount, retries, totalDelay, new Date() - startTime)
       )
     return innerF(parameters...)
   return f
 
-wrapExecuteStoredProcedure = (_client, _method, retriesAllowed) ->  # TODO: This has gotten way behind wrapCallbackMethod in terms of retriesAllowed logic, retries count maintain, request charges, cumulative delay
+wrapExecuteStoredProcedure = (that, _method, retriesAllowed) ->
   f = (parameters...) ->
+    startTime = new Date()
+    roundTripCount = 0
+    retries = 0
+    totalDelay = 0
     callback = parameters.pop()
     innerF = (parameters...) ->
-      return _method.call(_client, parameters..., (err, response, headers) ->
+      return _method.call(that, parameters..., (err, response, headers) ->
+        roundTripCount++
         if err?
-          if err.code in [429, 449] and retries <= retriesAllowed
+          if isRetryError(err) and retries <= retriesAllowed
             retryAfter = headers['x-ms-retry-after-ms'] or 0
             retryAfter = Number(retryAfter)
+            retries++
+            totalDelay += retryAfter
             delay(retryAfter, () ->
               innerF(parameters...)
             )
             return
           else
-            callback(err, response, headers)
+            callback(err, response, headers, roundTripCount, retries, totalDelay, new Date() - startTime)
         else
           if response.continuation?
             parameters[1] = response
-            innerF(null, parameters...)
+            innerF(parameters...)
           else
-            callback(err, response, headers)
+            callback(err, response, headers, roundTripCount, retries, totalDelay, new Date() - startTime)
       )
-    return innerF(retriesAllowed, parameters...)
+    return innerF(parameters...)
   return f
 
 module.exports = class WrappedClient
@@ -182,10 +213,10 @@ module.exports = class WrappedClient
       if firstParameterIsLink
         if hasArrayVersion
           methodNameToWrap = methodName + 'Array'
+          asyncJSMethod = wrapToCreateArrayAsyncJSIterator(this, this[methodNameToWrap])
         else
           methodNameToWrap = methodName
-
-        asyncJSMethod = wrapToCreateAsyncJSIterator(this, this[methodNameToWrap])
+          asyncJSMethod = wrapToCreateAsyncJSIterator(this, this[methodNameToWrap])
         this[methodNameToWrap + 'AsyncJSIterator'] = asyncJSMethod
         this[methodNameToWrap + 'Multi'] = wrapMultiMethod(this, asyncJSMethod)
 

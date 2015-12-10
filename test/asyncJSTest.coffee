@@ -55,25 +55,29 @@ exports.asyncJSTest =
 
   arrayTest: (test) ->
     collectionLink = getLink('dev-test-database', 1)
-    wrappedClient.readDocumentsArrayAsyncJSIterator([collectionLink, {maxItemCount: 5}], (err, response) ->
+    wrappedClient.readDocumentsArrayAsyncJSIterator([collectionLink, {maxItemCount: 4}], (err, result, stats) ->
       if err?
         console.dir(err)
         throw new Error("Got error when trying to readDocumentsArray via WrappedClient")
-      test.equal(response.response.length, docsRemaining)
-      test.ok(response.headers?)
-      test.ok(response.other > 1)
+      test.equal(result.length, docsRemaining)
+      test.equal(stats.roundTripCount, 3)
+      test.equal(stats.retries, 0)
+      test.equal(stats.totalDelay, 0)
+      test.ok(stats.totalTime >= 10)
       test.done()
     )
 
   createDocumentTest: (test) ->
     collectionLink = getLink('dev-test-database', 1)
-    wrappedClient.createDocumentAsyncJSIterator([collectionLink, {a: 1}], (err, response) ->
+    wrappedClient.createDocumentAsyncJSIterator([collectionLink, {a: 1}], (err, result) ->
       if err?
         console.dir(err)
-        throw new Error("Got error when trying to readDocumentsArray via WrappedClient")
-      test.equal(response.response.a, 1)
-      test.ok(response.headers?)
-      test.ok(response.other?)
+        throw new Error("Got error when trying to createDocumentAsyncJSIterator via WrappedClient")
+      test.equal(result.response.a, 1)
+      test.ok(result.headers?)
+      test.equal(result.retries, 0)
+      test.equal(result.totalDelay, 0)
+      test.ok(result.totalTime >= 10)
       test.done()
     )
 
@@ -90,7 +94,16 @@ exports.asyncJSTest =
         throw new Error("Got unexpected error in asyncMapTest")
       test.equal(result.length, docs.length)
       test.equal(result[0].response.a, docs[0].a)
+      test.ok(result[0].headers?)
+      test.equal(result[0].retries, 0)
+      test.equal(result[0].totalDelay, 0)
+      test.ok(result[0].totalTime >= 10)
+
       test.equal(result[1].response.b, docs[1].b)
+      test.ok(result[1].headers?)
+      test.equal(result[1].retries, 0)
+      test.equal(result[1].totalDelay, 0)
+      test.ok(result[1].totalTime >= 10)
       test.done()
     )
 
@@ -101,10 +114,13 @@ exports.asyncJSTest =
     async.map(parametersArray, wrappedClient.executeStoredProcedureAsyncJSIterator, (err, result) ->
       if err?
         console.dir(err)
-        throw new Error("Got unexpected error in asyncMapTest")
+        throw new Error("Got unexpected error in sprocAsyncMapTest")
       test.equal(result[0].response.count, docsRemaining)
+      test.equal(result[0].roundTripCount, 1)
       test.ok(result[0].headers?)
-      test.ok(result[0].other is undefined)
+      test.equal(result[0].retries, 0)
+      test.equal(result[0].totalDelay, 0)
+      test.ok(result[0].totalTime >= 10)
       test.done()
     )
 

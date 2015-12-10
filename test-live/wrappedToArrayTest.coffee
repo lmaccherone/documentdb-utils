@@ -1,7 +1,7 @@
 path = require('path')
 {DocumentClient} = require('documentdb')
 async = require('async')
-{WrappedClient, loadSprocs, getLinkArray, getLink} = require('../')
+{WrappedClient, loadSprocs, getLinkArray, getLink} = require('../index')
 
 
 client = null

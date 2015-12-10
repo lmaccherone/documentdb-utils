@@ -1,7 +1,7 @@
 path = require('path')
 {DocumentClient} = require('documentdb')
 async = require('async')
-{WrappedClient, loadSprocs, getLinkArray, getLink} = require('../')
+{WrappedClient, loadSprocs, getLinkArray, getLink} = require('../index')
 
 
 client = null
@@ -34,12 +34,34 @@ exports.underscoreTest =
 
 
   theTest: (test) ->
-    sprocLink = getLink('dev-test-database', 1, 'testUnderscore')
+    sprocLink = getLink('dev-test-database', 1, 'testAsync')
     client.executeStoredProcedure(sprocLink, (err, response, headers) ->
       if err?
         console.dir(err)
         throw new Error("Got error running testUnderscore sproc")
-      console.log(response)
+
+      expected =
+        stepOne: true,
+        waterfall1: true,
+        waterfallParameter: 'one',
+        waterfallEnd: true,
+        waterfallResult: 'two',
+        series1: true,
+        series2: true,
+        seriesEnd: true,
+        seriesResult: [ 'one', 'two' ],
+        parallel1: true,
+        parallel2: true,
+        parallelEnd: true,
+        parallelResult: [ 'one', 'two' ],
+        auto1: true,
+        auto2: true,
+        auto3: true,
+        auto3Results: { one: 'one', two: 'two', three: 'three' },
+        autoEnd: true,
+        autoResult: { one: 'one', two: 'two', three: 'three' }
+
+      test.deepEqual(response, expected)
       test.done()
     )
 

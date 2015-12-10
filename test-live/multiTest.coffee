@@ -1,7 +1,7 @@
 path = require('path')
 {DocumentClient} = require('documentdb')
 async = require('async')
-{WrappedClient, loadSprocs, getLinkArray, getLink} = require('../')
+{WrappedClient, loadSprocs, getLinkArray, getLink} = require('../index')
 
 
 client = null
@@ -45,26 +45,26 @@ exports.multiTest =
       )
     )
 
-  multiUpsertStoredProcedureTest: (test) ->
-    collectionLinks = getLinkArray(['dev-test-database'], [1, 2])
-    hello = () -> getContext().getResponse().setBody('Hello world!')
-    wrappedClient.upsertStoredProcedureMulti(collectionLinks, {id: 'hello', body: hello}, (err, result) ->
-      test.equal(result.response.length, 2)
-      test.equal(result.headers.length, 2)
-      test.equal(result.roundTripCount, 2)
-      test.equal(result.retries, 0)
-      test.equal(result.totalDelay, 0)
-      test.ok(result.totalTime >= 10)
-      test.done()
-    )
-
-#  multiStoredProcedureTest: (test) ->
-#    sprocLinks = getLinkArray(['dev-test-database'], [1, 2], 'countDocuments')
-#    wrappedClient.executeStoredProcedureMulti(sprocLinks, (err, result, stats) ->
-#      test.equal(result.length, 2)
-#      test.ok(stats.requestUnitCharges?)
+#  multiUpsertStoredProcedureTest: (test) ->
+#    collectionLinks = getLinkArray(['dev-test-database'], [1, 2])
+#    hello = () -> getContext().getResponse().setBody('Hello world!')
+#    wrappedClient.upsertStoredProcedureMulti(collectionLinks, {id: 'hello', body: hello}, (err, result) ->
+#      test.equal(result.response.length, 2)
+#      test.equal(result.headers.length, 2)
+#      test.equal(result.roundTripCount, 2)
+#      test.equal(result.retries, 0)
+#      test.equal(result.totalDelay, 0)
+#      test.ok(result.totalTime >= 10)
 #      test.done()
 #    )
+
+  multiStoredProcedureTest: (test) ->
+    sprocLinks = getLinkArray(['dev-test-database'], [1, 2], 'countDocuments')
+    wrappedClient.executeStoredProcedureMulti(sprocLinks, (err, result, stats) ->
+      test.equal(result.length, 2)
+      test.ok(stats.requestUnitCharges?)
+      test.done()
+    )
 #
 #  multiReadDocumentsTest: (test) ->
 #    collectionLinks = getLinkArray(['dev-test-database'], [1, 2])

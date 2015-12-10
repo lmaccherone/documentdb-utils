@@ -29,9 +29,9 @@ exports.countTest =
     ]
     mock.resourcesList = [firstBatch, secondBatch]
 
-    firstOptions = {continuation: 'ABC123'}
-    secondOptions = {}
-    mock.optionsList = [firstOptions, secondOptions]
+    firstHeaders = {continuation: 'ABC123'}
+    secondHeaders = {}
+    mock.headersList = [firstHeaders, secondHeaders]
 
     mock.package()
 
@@ -54,9 +54,9 @@ exports.countTest =
     ]
     mock.resourcesList = [firstBatch, secondBatch]
 
-    firstOptions = {continuation: 'ABC123'}
-    secondOptions = {}
-    mock.optionsList = [firstOptions, secondOptions]
+    firstHeaders = {continuation: 'ABC123'}
+    secondHeaders = {}
+    mock.headersList = [firstHeaders, secondHeaders]
 
     mock.collectionOperationQueuedList = [true, false, true]
 

@@ -61,7 +61,7 @@ exports.mockedQueryDocumentsTest =
 
     iterator = client.queryDocuments(collectionLink, query, options)
 
-    iterator.executeNext((err, result, headers, retries) ->
+    iterator.executeNext((err, result, headers, roundTripCount, retries, totalDelay, totalTime) ->
       if err?
         console.dir(err)
         throw new Error("Got unexpected error during error429Test")
@@ -69,15 +69,21 @@ exports.mockedQueryDocumentsTest =
       test.deepEqual(result, firstBatch)
       test.deepEqual(headers, firstHeaders)
       test.equal(retries, 1)
+      test.equal(roundTripCount, 2)
+      test.equal(totalDelay, 0)
+      test.ok(_.isNumber(totalTime))
 
-      iterator.executeNext((err, result, headers, retries) ->
+      iterator.executeNext((err, result, headers, roundTripCount, retries, totalDelay, totalTime) ->
         if err?
           console.dir(err)
           throw new Error("Got unexpected error during error429Test")
 
         test.deepEqual(result, secondBatch)
         test.deepEqual(headers, secondHeaders)
+        test.equal(roundTripCount, 1)
         test.equal(retries, 0)
+        test.equal(totalDelay, 0)
+        test.ok(_.isNumber(totalTime))
 
         test.equal(mock.lastEntityLink, collectionLink)
         test.equal(mock.lastQueryFilter, query)

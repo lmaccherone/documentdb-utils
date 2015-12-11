@@ -26,11 +26,13 @@ Note, versions prior to 0.4.0 had a very different interface exposed as the func
 
 ### Extended functionality ###
 
+* All `query<entity>s` methods now accept MongoDB-like queries which are atuomatically converted to SQL by [sql-from-mongo](https://www.npmjs.com/package/sql-from-mongo). You can still send in strings or objects with parameters as before, but it senses that the query is a MongoDB like query and acts accordingly.
+
 * `<old-method>Array(..., callback)` as short-hand for `.toArray()` calls. Example:  `readDocumentsArray(collectionLink, callback)`. This alone makes it easier to use higher order async functions, but I'm not done yet.
 
 * `<old-method>Multi(linkArray, ..., callback)` and `<old-method>ArrayMulti(linkArray, ..., callback)` as automatic fan-out to multiple collections, sprocs, etc. for each method whose first parameter is a link. If you want to run the same query against multiple collections or call a sproc by the same name in different collections, you can now do that with one line. The results are automatically aggregated into a single callback response. Example: `executeStoredProcedureMulti(arrayOfCollecitonLinks, 'countDocuments', callback)`.
 
-* Aggregated stats on the number of round trips and RU costs used by `...Multi()` operations.
+* Aggregated stats on the number of round trips, request unit costs, retries, time lost to retries as well as total execution time for operations.
 
 * `<old-method>AsyncJSIterator(item, callback)` wrapper of methods to enable use of async.js's higher order functions like map, filter, etc. This is used internally to provide the multi-link capability but you can use it yourself to compose your own. See test code for examples.
 
@@ -210,8 +212,8 @@ The expandScript function will take the above and produce:
     
 Two things to keep in mind when trying to use expandScript:
 
-1. The require must be on it's own line and it must be in the form `myVar = require('myPackage')`. You can do stuff with myVar, just make sure it's on a different line.
-2. The mixins can be written in either JavaScript or CoffeeScript but the main file must in CoffeeScript. This is something I could fix, but I didn't have the need personally so I didn't bother. The work around for this problem is to create a small CoffeeScript stub but put the bulk of your code in JavaScript that you `require()` from within your CoffeeScript stub.
+1. The require must be on its own line and it must be in the form `myVar = require('myPackage')`. You can do stuff with myVar, just make sure it's on a different line.
+2. The mixins can be written in either JavaScript or CoffeeScript but the main file must in CoffeeScript. This is something I could fix, but I didn't have the need personally so I didn't bother. The work around is to create a small CoffeeScript stub but put the bulk of your code in JavaScript that you `require()` from within your CoffeeScript stub.
   
 So, it doesn't support the miriad different ways you can specify packages and requires. Many npm packages work out of the box, but others need some cleanup before they'll work. It's just doing string manipulation after all. However, it does give you an oportunity to modularlize your code and use some npm packages in your sprocs and UDFs.
 
@@ -298,6 +300,7 @@ Here is an example of a stored procedure that counts all the documents in a coll
 
 ## Changelog ##
 
+* 0.7.0 - 2015-12-10 - Added support for mongo-like queries in WrappedClient
 * 0.6.0 - 2015-12-10 - **WARNING - Slightly backward breaking because it adds parameters to callbacks. Shouldn't effect drop-in replacement of DocumentClient** Upgraded stats and bug fixes for WrappedClient
 * 0.5.1 - 2015-12-09 - Documentation edits
 * 0.5.0 - 2015-12-08 - **WARNING - Slightly backward breaking on API for loadScripts** Updated docs

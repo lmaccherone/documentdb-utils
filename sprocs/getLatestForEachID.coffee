@@ -31,7 +31,7 @@ module.exports = (memo) ->
 
     for row in resources
       lastRowForThisId = memo.result[row.UserId]
-      if row.DateCreated > lastRowForThisId.DateCreated
+      if not lastRowForThisId? or row.DateCreated > lastRowForThisId.DateCreated
         memo.result[row.UserId] = row
 
     if options.continuation?

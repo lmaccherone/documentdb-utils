@@ -42,7 +42,7 @@ exports.countTest =
     mock.headersList = [firstHeaders, secondHeaders]
 
     mock.package()
-    
+
     expected = {
       '1': { UserId: 1, value: 30, DateCreated: '2015-12-10 22:46:03' },
       '2': { UserId: 2, value: 20, DateCreated: '2015-12-10 22:46:04' }

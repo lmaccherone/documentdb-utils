@@ -106,11 +106,11 @@ module.exports =
     test.equal(mock.lastQueryFilter, "SELECT * FROM c WHERE c.value = 30")
 
     query = {query: {value: 30}, fields: ['value']}
-    iterator = client.queryDocuments('', query, {})
+    iterator = client.queryCollections('', query, {})
     test.equal(mock.lastQueryFilter, "SELECT c.value FROM c WHERE c.value = 30")
 
     query = {query: {value: 30}, collectionName: 'junk'}
-    iterator = client.queryDocuments('', query, {})
+    iterator = client.queryUsers('', query, {})
     test.equal(mock.lastQueryFilter, "SELECT * FROM junk WHERE junk.value = 30")
 
     test.done()

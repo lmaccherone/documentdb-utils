@@ -1,6 +1,7 @@
 _ = require('lodash')
 async = require('async')
 {DocumentClient} = require('documentdb')
+{sqlFromMongo} = require('sql-from-mongo')
 
 delay = (ms, func) ->
   setTimeout(func, ms)
@@ -21,14 +22,36 @@ WrappedQueryIterator = class
       else
         this[methodName] = wrapSimpleMethod(@_iterator, _method)
 
+convertParametersArrayToSQLFromMongo = (parameters) ->
+  for parameter, index in parameters
+    if _.isString(parameter) and _.startsWith(parameter, "SELECT")
+      # leave it alone
+      return parameters
+    else if _.isPlainObject(parameter) and _.isString(parameter.query) and parameter.parameters?
+      # also leave it alone
+      return parameters
+    else if _.isPlainObject(parameter) and (parameter.mongoObject? or parameter.query?)
+      {mongoObject, collectionName, fields} = parameter
+      if parameter.query? and not mongoObject?
+        mongoObject = parameter.query
+      unless collectionName?
+        collectionName = 'c'
+      unless fields?
+        fields = '*'
+      parameters[index] = sqlFromMongo(mongoObject, collectionName, fields)
+      return parameters
+  return parameters
+
 wrapQueryIteratorMethod = (_client, _method, retriesAllowed) ->
   f = (parameters...) ->
+    parameters = convertParametersArrayToSQLFromMongo(parameters)
     _iterator = _method.call(_client, parameters...)
     return new WrappedQueryIterator(_iterator, retriesAllowed)
   return f
 
 wrapQueryIteratorMethodForArray = (_client, _method, retriesAllowed) ->
   f = (parameters...) ->
+    parameters = convertParametersArrayToSQLFromMongo(parameters)
     callback = parameters.pop()
     _iterator = _method.call(_client, parameters...)
     iterator = new WrappedQueryIterator(_iterator, retriesAllowed)

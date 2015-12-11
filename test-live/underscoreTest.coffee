@@ -14,6 +14,7 @@ exports.underscoreTest =
     urlConnection = process.env.DOCUMENT_DB_URL
     masterKey = process.env.DOCUMENT_DB_KEY
     auth = {masterKey}
+#    connectionPolicy = {RequestTimeout: 2000}
     client = new DocumentClient(urlConnection, auth)
     wrappedClient = new WrappedClient(client)
     client.deleteDatabase('dbs/dev-test-database', () ->

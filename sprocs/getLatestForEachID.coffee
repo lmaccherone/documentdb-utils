@@ -30,8 +30,9 @@ module.exports = (memo) ->
       throw err
 
     for row in resources
-      if row.DateCreated > memo.result[row.UserId]
-        memo.result[row.UserId] = row.DateCreated
+      lastRowForThisId = memo.result[row.UserId]
+      if row.DateCreated > lastRowForThisId.DateCreated
+        memo.result[row.UserId] = row
 
     if options.continuation?
       memo.continuation = options.continuation

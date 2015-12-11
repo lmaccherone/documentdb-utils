@@ -26,7 +26,7 @@ Note, versions prior to 0.4.0 had a very different interface exposed as the func
 
 ### Extended functionality ###
 
-* All `query<entity>s` methods now accept MongoDB-like queries which are atuomatically converted to SQL by [sql-from-mongo](https://www.npmjs.com/package/sql-from-mongo). You can still send in strings or objects with parameters as before, but it senses that the query is a MongoDB like query and acts accordingly.
+* All `query<entity>s` methods now accept MongoDB-like queries which are atuomatically converted to SQL by [sql-from-mongo](https://www.npmjs.com/package/sql-from-mongo). You can still send in strings or objects with parameters as before, but it senses that the query is a MongoDB like query and acts accordingly. It's much easier to compose queries like `{value: 1}` than `SELECT * FROM c WHERE value = 1`, IMHO.
 
 * `<old-method>Array(..., callback)` as short-hand for `.toArray()` calls. Example:  `readDocumentsArray(collectionLink, callback)`. This alone makes it easier to use higher order async functions, but I'm not done yet.
 

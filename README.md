@@ -300,6 +300,7 @@ Here is an example of a stored procedure that counts all the documents in a coll
 
 ## Changelog ##
 
+* 0.7.1 - 2015-12-12 - Moved sql-from-mongo to dependencies from dev-dependencies
 * 0.7.0 - 2015-12-10 - Added support for mongo-like queries in WrappedClient
 * 0.6.0 - 2015-12-10 - **WARNING - Slightly backward breaking because it adds parameters to callbacks. Shouldn't effect drop-in replacement of DocumentClient** Upgraded stats and bug fixes for WrappedClient
 * 0.5.1 - 2015-12-09 - Documentation edits

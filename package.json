@@ -1,6 +1,6 @@
 {
   "name": "documentdb-utils",
-  "version": "0.7.0",
+  "version": "0.7.1",
   "description": "Drop-in replacement+extensions for Azure's DocumentDB node.js client with auto-retry on 429 errors plus a lot more",
   "main": "./index",
   "scripts": {
@@ -34,12 +34,12 @@
   "devDependencies": {
     "coffee-script": "^1.9.2",
     "nodeunit": "^0.9.1",
-    "documentdb-mock": "^0.3.0",
-    "sql-from-mongo": "^0.2.0"
+    "documentdb-mock": "^0.3.0"
   },
   "dependencies": {
     "async": "^1.5.0",
     "documentdb": "^1.4.0",
-    "lodash": "^3.10.1"
+    "lodash": "^3.10.1",
+    "sql-from-mongo": "^0.2.0"
   }
 }

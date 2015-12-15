@@ -63,10 +63,10 @@ wrapToArray = (iterator) ->
     all = []
     stats = {roundTripCount: 0, retries: 0, requestUnitCharges: 0, totalDelay: 0, totalTime: 0}
     innerF = () ->
-      iterator.executeNext((err, response, headers, roundTripCount, retries, totalDelay, totalTime) ->
+      iterator.executeNext((err, response, headers, roundTripCount, retries, totalDelay, totalTime, requestUnitCharges) ->
         stats.roundTripCount++
         stats.retries += retries
-        stats.requestUnitCharges += Number(headers['x-ms-request-charge']) or 0
+        stats.requestUnitCharges += requestUnitCharges
         stats.totalDelay += totalDelay
         stats.totalTime += totalTime
         if err?
@@ -88,8 +88,8 @@ wrapSimpleMethod = (that, _method) ->
 
 wrapToCreateAsyncJSIterator = (that, _method) ->
   f = (item, callback) ->
-    return _method.call(that, item..., (err, response, headers, roundTripCount, retries, totalDelay, totalTime) ->
-      callback(err, {response, headers, roundTripCount, retries, totalDelay, totalTime})
+    return _method.call(that, item..., (err, response, headers, roundTripCount, retries, totalDelay, totalTime, requestUnitCharges) ->
+      callback(err, {response, headers, roundTripCount, retries, totalDelay, totalTime, requestUnitCharges})
     )
   return f
 
@@ -159,6 +159,7 @@ wrapCallbackMethod = (that, _method, retriesAllowed) ->
     roundTripCount = 0
     retries = 0
     totalDelay = 0
+    requestUnitCharges  = 0  #+= Number(headers['x-ms-request-charge']) or 0
     callback = parameters.pop()
     innerF = (parameters...) ->
       return _method.call(that, parameters..., (err, response, headers) ->
@@ -169,14 +170,15 @@ wrapCallbackMethod = (that, _method, retriesAllowed) ->
             retryAfter = Number(retryAfter)
             retries++
             totalDelay += retryAfter
+            requestUnitCharges += Number(headers['x-ms-request-charge']) or 0
             delay(retryAfter, () ->
               innerF(parameters...)
             )
             return
           else
-            callback(err, response, headers, roundTripCount, retries, totalDelay, new Date() - startTime)
+            callback(err, response, headers, roundTripCount, retries, totalDelay, new Date() - startTime, requestUnitCharges)
         else
-          callback(err, response, headers, roundTripCount, retries, totalDelay, new Date() - startTime)
+          callback(err, response, headers, roundTripCount, retries, totalDelay, new Date() - startTime, requestUnitCharges)
       )
     return innerF(parameters...)
   return f
@@ -187,6 +189,7 @@ wrapExecuteStoredProcedure = (that, _method, retriesAllowed) ->
     roundTripCount = 0
     retries = 0
     totalDelay = 0
+    requestUnitCharges = 0
     callback = parameters.pop()
     innerF = (parameters...) ->
       return _method.call(that, parameters..., (err, response, headers) ->
@@ -197,18 +200,19 @@ wrapExecuteStoredProcedure = (that, _method, retriesAllowed) ->
             retryAfter = Number(retryAfter)
             retries++
             totalDelay += retryAfter
+            requestUnitCharges += Number(headers['x-ms-request-charge']) or 0
             delay(retryAfter, () ->
               innerF(parameters...)
             )
             return
           else
-            callback(err, response, headers, roundTripCount, retries, totalDelay, new Date() - startTime)
+            callback(err, response, headers, roundTripCount, retries, totalDelay, new Date() - startTime, requestUnitCharges)
         else
           if response.continuation?
             parameters[1] = response
             innerF(parameters...)
           else
-            callback(err, response, headers, roundTripCount, retries, totalDelay, new Date() - startTime)
+            callback(err, response, headers, roundTripCount, retries, totalDelay, new Date() - startTime, requestUnitCharges)
       )
     return innerF(parameters...)
   return f

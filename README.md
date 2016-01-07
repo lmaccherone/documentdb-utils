@@ -243,10 +243,10 @@ So:
 1. Support an empty or missing `memo` on the initial call.
 1. Store any variable that represents the current running state of the stored procedure into the `memo` object.
 1. Store the `continuation` field returned by readDocuments and queryDocuments into `memo.continuation`. If you are doing only creates, updates, and deletes or even a set of readDocument() calls within your sproc and you want it to pause and resume for some reason, then set `continuation` manually (value doesn't matter).
-1. Store in the field called `stillQueueing` the boolean value returned by the last collection operation. (NOTE: We may be able to remove this if/when we remove the sproc delete and upsert hack.)
+1. Keep track of the boolean value returned from the last collection operation (read, query, create, upsert, etc.) and use it to determine whether or not it's time to return. My pattern is to store this in memo.stillQueueing and that used to be a requirement of documentdb-utils, but it no longer is.
 1. Optionally store any internal visibility (debugging, timings, etc.) into the `memo` object.
 1. Call `getContext().getResponse().setBody(memo)` regulary, particularly right after you kick off a collection operation (readDocuments, createDocument, etc.).
-1. If `false` is returned from the most recent call to a collection operation, don't issue any more async calls. Rather, wrap up the stored procedure quickly.
+1. If `false` is returned from the most recent call to a collection operation, don't issue any more async calls. Rather, perform any aggregations and wrap up the stored procedure quickly.
 
 Here is an example of a stored procedure that counts all the documents in a collection with an option to filter based upon provided filterQuery field in the initial memo. The source for this is included in this repository.
 

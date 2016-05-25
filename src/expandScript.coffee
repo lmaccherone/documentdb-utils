@@ -43,8 +43,16 @@ insertMixins = (source, minify = false) ->
     keyIndex = currentLine.indexOf(keyString)
     variableString = currentLine.substr(0, keyIndex).trim()
     toRequireString = currentLine.substr(keyIndex + keyString.length + 1)
+    afterRequireIndex = toRequireString.indexOf("').")
+    if afterRequireIndex >= 0
+      afterRequireString = toRequireString.substr(afterRequireIndex + 3)
+      afterRequireString = afterRequireString.substr(0, afterRequireString.length - 1)
+      afterRequireArray = afterRequireString.split('.')
     toRequireString = toRequireString.substr(0, toRequireString.indexOf("'"))
     functionToInsert = require(toRequireString)
+    while afterRequireArray?.length > 0
+      nextReference = afterRequireArray.shift()
+      functionToInsert = functionToInsert[nextReference]
     spacesToIndent = startingSpacesCount(currentLine)
     if _.isFunction(functionToInsert)
       functionToInsertString = indent(variableString + " = " + functionToInsert.toString() + ';\n', spacesToIndent)

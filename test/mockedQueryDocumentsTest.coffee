@@ -136,7 +136,7 @@ exports.mockedQueryDocumentsTest =
     error429 = {code: 429, body: "429 Error"}
     mock.errorList = [error429, null, null]
     nonRetryHeaders = {'x-ms-request-charge': 1000}
-    retryHeaders = {'x-ms-retry-after-ms': '10', 'x-ms-request-charge': 100}
+    retryHeaders = {'x-ms-retry-after-ms': '10', 'x-ms-request-charge': 2000}
     mock.headersList = [retryHeaders, nonRetryHeaders, nonRetryHeaders]
 
     collectionLink = 'dbs/A/colls/1'

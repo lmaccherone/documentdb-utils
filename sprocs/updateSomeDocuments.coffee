@@ -42,7 +42,8 @@ module.exports = (memo) ->
       responseOptions =
         pageSize: memo.remaining
       setBody()
-      stillQueuingOperations = collection.readDocuments(collection.getSelfLink(), responseOptions, onReadDocuments)
+      memo.stillQueueing = collection.readDocuments(collection.getSelfLink(), responseOptions, onReadDocuments)
+      setBody()
 
   onReadDocuments = (err, resources, options) ->
     if err
@@ -52,14 +53,14 @@ module.exports = (memo) ->
       throw new Error("Expected memo.remaining (#{memo.remaining}) and the number of rows returned (#{resources.length}) to match. They don't.")
 
     memo.stillQueueing = true
-    while memo.remaining > 0 and memo.stillQueueing
+    while memo.remaining > 0 and memo.stillQueueing  # TODO: This is an antipattern. It will cause a lot of operations to queue at once
       oldDocument = resources[memo.remaining - 1]
       documentLink = oldDocument._self
       etag = oldDocument._etag
       options = {etag}  # Sending the etag per best practice, but not handling it if there is conflict.
       newDocument = getRandomRow()
       newDocument.id = oldDocument.id
-      getContext().getResponse().setBody(memo)
+      setBody()
       memo.stillQueueing = collection.replaceDocument(documentLink, newDocument, options)
       if memo.stillQueueing
         memo.transactions.push({oldDocument, newDocument})

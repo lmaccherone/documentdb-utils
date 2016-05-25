@@ -22,7 +22,7 @@ Note, versions prior to 0.4.0 had a very different interface exposed as the func
 
 * Automatically handles 429 throttling responses by retrying after the delay specified by the prior operation.
 
-* Sproc execution continuation. Automatically deals with early termination of stored procedures for exceeding resources. Just follow a simple pattern (memoization like that used in a reduce function) for writing your stored procedures. The state will be shipped back to the calling side and the stored procedure will be called again picking back up right where it left off. I want to upgrade this to serialize a sproc execution continuation in a document or attachment so we don't have to ship the state  back and forth. The state for a call to documentdb-lumenize/cube can get pretty large.
+* Sproc execution continuation. Automatically deals with early termination of stored procedures for exceeding resources. Just follow a simple pattern (memoization like that used in a reduce function) for writing your stored procedures. The state will be shipped back to the calling side and the stored procedure will be called again picking back up right where it left off. I want to upgrade this to serialize a sproc execution continuation in a document or attachment so we don't have to ship the state back and forth. The state for a call to documentdb-lumenize/cube can get pretty large.
 
 ### Extended functionality ###
 
@@ -32,9 +32,9 @@ Note, versions prior to 0.4.0 had a very different interface exposed as the func
 
 * `<old-method>Multi(linkArray, ..., callback)` and `<old-method>ArrayMulti(linkArray, ..., callback)` as automatic fan-out to multiple collections, sprocs, etc. for each method whose first parameter is a link. If you want to run the same query against multiple collections or call a sproc by the same name in different collections, you can now do that with one line. The results are automatically aggregated into a single callback response. Example: `executeStoredProcedureMulti(arrayOfCollecitonLinks, 'countDocuments', callback)`.
 
-* Aggregated stats on the number of round trips, request unit costs, retries, time lost to retries as well as total execution time for operations.
-
 * `<old-method>AsyncJSIterator(item, callback)` wrapper of methods to enable use of async.js's higher order functions like map, filter, etc. This is used internally to provide the multi-link capability but you can use it yourself to compose your own. See test code for examples.
+
+* Aggregated stats on the number of round trips, request unit costs, retries, time lost to retries as well as total execution time for operations.
 
 ### The kitchen sink ###
 
@@ -210,12 +210,13 @@ The expandScript function will take the above and produce:
         return y = 2;
     }
     
-Two things to keep in mind when trying to use expandScript:
+A few things to keep in mind when trying to use expandScript:
 
-1. The require must be on its own line and it must be in the form `myVar = require('myPackage')`. You can do stuff with myVar, just make sure it's on a different line.
-2. The mixins can be written in either JavaScript or CoffeeScript but the main file must in CoffeeScript. This is something I could fix, but I didn't have the need personally so I didn't bother. The work around is to create a small CoffeeScript stub but put the bulk of your code in JavaScript that you `require()` from within your CoffeeScript stub.
-  
-So, it doesn't support the miriad different ways you can specify packages and requires. Many npm packages work out of the box, but others need some cleanup before they'll work. It's just doing string manipulation after all. However, it does give you an oportunity to modularlize your code and use some npm packages in your sprocs and UDFs.
+1. The require must be on its own line.
+2. It doesn't support the miriad different ways you can specify packages and requires. It only accepts two forms: a) `myVar = require('myPackage')` or b) `myVar = require('myPackage').some.lower.reference`. If you use the first form, it will import everything so if you just want one function of a library, use the second form.
+3. The mixins can be written in either JavaScript or CoffeeScript but the main file must in CoffeeScript. This is something I could fix, but I didn't have the need personally so I didn't bother. The work around is to create a small CoffeeScript stub but put the bulk of your code in JavaScript that you `require()` from within your CoffeeScript stub. 
+
+Many npm packages work out of the box, but others need some cleanup before they'll work. It's just doing string manipulation after all. However, it does give you an oportunity to modularlize your code and use some npm packages in your sprocs and UDFs.
 
 ### Using async.js and underscore.js inside of sprocs ###
 
@@ -239,7 +240,7 @@ Pehaps the most common use of stored procedures is to aggregate or transform dat
 
 So:
 
-1. Only accept one parameter -- a JavaScript Object. Let's name it `memo`.
+1. Only accept one parameter -- a JavaScript Object. Let's name it `memo`. Put any parameters for your sproc in that Object (e.g. `{parameter1: "my Value", parameter2: 100}
 1. Support an empty or missing `memo` on the initial call.
 1. Store any variable that represents the current running state of the stored procedure into the `memo` object.
 1. Store the `continuation` field returned by readDocuments and queryDocuments into `memo.continuation`. If you are doing only creates, updates, and deletes or even a set of readDocument() calls within your sproc and you want it to pause and resume for some reason, then set `continuation` manually (value doesn't matter).
@@ -301,6 +302,7 @@ Here is an example of a stored procedure that counts all the documents in a coll
 
 ## Changelog ##
 
+* 0.7.2 - 2015-05-25 - Sprocs can now use mixins like this `myVar = require('some_package').some.other.reference`
 * 0.7.1 - 2015-12-12 - Moved sql-from-mongo to dependencies from dev-dependencies
 * 0.7.0 - 2015-12-10 - Added support for mongo-like queries in WrappedClient
 * 0.6.0 - 2015-12-10 - **WARNING - Slightly backward breaking because it adds parameters to callbacks. Shouldn't effect drop-in replacement of DocumentClient** Upgraded stats and bug fixes for WrappedClient
@@ -381,7 +383,7 @@ I use the relatively simplistic documentdb-mock for writing automated tests for 
 
 ## MIT License ##
 
-Copyright (c) 2015 Lawrence S. Maccherone, Jr.
+Copyright (c) 2015, 2016 Lawrence S. Maccherone, Jr.
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of this software 
 and associated documentation files (the "Software"), to deal in the Software without 
